@@ -15,9 +15,9 @@ This is designed as a strong assignment submission: simple enough to finish reli
 
 ## Core Features
 
-- Company selector for `INFY`, `TCS`, and `RELIANCE`
+- Left-side clickable company list for `INFY`, `TCS`, and `RELIANCE`
 - Historical stock data view for 30, 60, or 90 days
-- Summary cards for current price, period high/low, volatility, and daily change
+- Summary cards for current price, 52-week high/low, average close, volatility, and daily change
 - 7-day and 20-day moving average visualization
 - Stock comparison chart using normalized performance
 - Short-term 7-business-day forecast using a simple linear trend projection
@@ -48,11 +48,11 @@ StockDataService
      v
 Flask API
      |
-     +--> /api/companies
-     +--> /api/data/<symbol>
-     +--> /api/summary/<symbol>
+     +--> /companies
+     +--> /data/<symbol>
+     +--> /summary/<symbol>
      +--> /api/forecast/<symbol>
-     +--> /api/compare
+     +--> /compare
      |
      v
 Dashboard UI
@@ -68,6 +68,8 @@ Dashboard UI
 |-- Procfile
 |-- render.yaml
 |-- Dockerfile
+|-- postman/
+|   `-- Stock-Intelligence-Dashboard.postman_collection.json
 |-- services/
 |   `-- stock_service.py
 |-- static/
@@ -113,24 +115,25 @@ python app.py
 
 ## API Endpoints
 
-- `GET /api/companies`
-- `GET /api/data/<symbol>?days=30`
-- `GET /api/summary/<symbol>?days=90`
+- `GET /companies`
+- `GET /data/<symbol>?days=30`
+- `GET /summary/<symbol>`
+- `GET /compare?symbol1=INFY&symbol2=TCS&days=30`
 - `GET /api/forecast/<symbol>?days=30&future_days=7`
-- `GET /api/compare?symbol1=INFY&symbol2=TCS&days=30`
 - `GET /health`
 
-### Example Response: `/api/summary/INFY?days=30`
+### Example Response: `/summary/INFY`
 
 ```json
 {
   "symbol": "INFY",
   "name": "Infosys Ltd.",
+  "period": "52-week",
   "current_price": 1524.8,
   "price_change": 18.45,
   "price_change_pct": 1.22,
-  "period_high": 1588.3,
-  "period_low": 1451.2,
+  "week_52_high": 1588.3,
+  "week_52_low": 1451.2,
   "average_close": 1512.9,
   "volatility_score": 1.84,
   "last_updated": "2026-03-30"
@@ -159,6 +162,7 @@ This repo is ready for basic deployment:
 - `Procfile` works for platforms like Render or Railway
 - `render.yaml` helps bootstrap a Render web service
 - `Dockerfile` supports container deployment
+- `postman/Stock-Intelligence-Dashboard.postman_collection.json` is included for API testing
 
 Production command:
 
@@ -177,7 +181,7 @@ gunicorn wsgi:app
 ## Important Notes
 
 - Supported symbols are currently limited to `INFY`, `TCS`, and `RELIANCE`
-- `days` must be between `5` and `180`
+- `days` must be between `5` and `365`
 - `future_days` must be between `3` and `30`
 - The forecast is a lightweight trend projection for demonstration purposes, not financial advice
 - On this machine, the project was verified successfully with `.venv314\Scripts\python.exe`

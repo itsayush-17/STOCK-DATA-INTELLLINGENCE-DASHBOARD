@@ -1,0 +1,101 @@
+{
+  "info": {
+    "name": "Stock Intelligence Dashboard",
+    "_postman_id": "b574cf0d-d718-43e6-a03f-bec37bc25cab",
+    "description": "Assignment API collection for the Stock Intelligence Dashboard.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Companies",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{base_url}}/companies",
+          "host": ["{{base_url}}"],
+          "path": ["companies"]
+        }
+      }
+    },
+    {
+      "name": "Stock Data",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{base_url}}/data/INFY?days=30",
+          "host": ["{{base_url}}"],
+          "path": ["data", "INFY"],
+          "query": [
+            {
+              "key": "days",
+              "value": "30"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Summary",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{base_url}}/summary/INFY",
+          "host": ["{{base_url}}"],
+          "path": ["summary", "INFY"]
+        }
+      }
+    },
+    {
+      "name": "Compare",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{base_url}}/compare?symbol1=INFY&symbol2=TCS&days=30",
+          "host": ["{{base_url}}"],
+          "path": ["compare"],
+          "query": [
+            {
+              "key": "symbol1",
+              "value": "INFY"
+            },
+            {
+              "key": "symbol2",
+              "value": "TCS"
+            },
+            {
+              "key": "days",
+              "value": "30"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Forecast Bonus",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{base_url}}/api/forecast/INFY?days=30&future_days=7",
+          "host": ["{{base_url}}"],
+          "path": ["api", "forecast", "INFY"],
+          "query": [
+            {
+              "key": "days",
+              "value": "30"
+            },
+            {
+              "key": "future_days",
+              "value": "7"
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://127.0.0.1:5000"
+    }
+  ]
+}

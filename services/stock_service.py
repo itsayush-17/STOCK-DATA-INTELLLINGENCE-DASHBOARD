@@ -32,7 +32,7 @@ class StockDataError(Exception):
 
 @dataclass
 class StockDataService:
-    history_period: str = "6mo"
+    history_period: str = "18mo"
 
     def _resolve_company(self, symbol: str) -> dict[str, str]:
         company = SUPPORTED_COMPANIES.get(symbol.upper())
@@ -75,6 +75,17 @@ class StockDataService:
         frame["date"] = frame["Date"].dt.strftime("%Y-%m-%d")
         return frame
 
+    def _get_52_week_frame(self, symbol: str) -> pd.DataFrame:
+        frame = self._load_history(symbol).copy()
+        latest_date = frame["Date"].max()
+        cutoff = latest_date - pd.Timedelta(days=365)
+        year_frame = frame[frame["Date"] >= cutoff].copy()
+
+        if year_frame.empty:
+            raise StockDataError(f"Not enough 52-week data available for '{symbol.upper()}'.")
+
+        return year_frame
+
     def get_stock_data(self, symbol: str, days: int = 30) -> dict:
         company = self._resolve_company(symbol)
         frame = self._load_history(symbol).tail(days).copy()
@@ -102,9 +113,9 @@ class StockDataService:
             "records": records,
         }
 
-    def get_summary(self, symbol: str, days: int = 90) -> dict:
+    def get_summary(self, symbol: str) -> dict:
         company = self._resolve_company(symbol)
-        frame = self._load_history(symbol).tail(days).copy()
+        frame = self._get_52_week_frame(symbol)
 
         if len(frame) < 2:
             raise StockDataError(f"Not enough data available for '{symbol.upper()}'.")
@@ -117,12 +128,12 @@ class StockDataService:
         return {
             "symbol": symbol.upper(),
             "name": company["name"],
-            "days": days,
+            "period": "52-week",
             "current_price": round(float(latest["Close"]), 2),
             "price_change": round(change, 2),
             "price_change_pct": round(change_pct, 2),
-            "period_high": round(float(frame["High"].max()), 2),
-            "period_low": round(float(frame["Low"].min()), 2),
+            "week_52_high": round(float(frame["High"].max()), 2),
+            "week_52_low": round(float(frame["Low"].min()), 2),
             "average_close": round(float(frame["Close"].mean()), 2),
             "average_volume": int(frame["Volume"].mean()),
             "volatility_score": round(float(frame["daily_return_pct"].std(ddof=0)), 2),

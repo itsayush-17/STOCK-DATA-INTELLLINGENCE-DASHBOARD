@@ -11,19 +11,15 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   </head>
   <body>
-    <main class="page-shell">
-      <section class="hero">
-        <div>
-          <p class="eyebrow">Mini Market Analytics System</p>
-          <h1>Stock Intelligence Dashboard</h1>
-          <p class="hero-copy">
-            Track daily performance, moving averages, high-low ranges, and compare two NSE stocks in one place.
-          </p>
-        </div>
-        <div class="hero-controls">
-          <label for="companySelect">Select Company</label>
-          <select id="companySelect"></select>
+    <main class="dashboard-layout">
+      <aside class="company-sidebar">
+        <p class="eyebrow">Assignment-Ready Build</p>
+        <h1>Stock Intelligence Dashboard</h1>
+        <p class="sidebar-copy">
+          Explore NSE companies, review 52-week insights, compare performance, and inspect a basic forecast line.
+        </p>
 
+        <div class="sidebar-section">
           <label for="periodSelect">Data Range</label>
           <select id="periodSelect">
             <option value="30">30 Days</option>
@@ -31,68 +27,87 @@
             <option value="90">90 Days</option>
           </select>
         </div>
-      </section>
 
-      <section class="summary-grid" id="summaryGrid">
-        <article class="stat-card">
-          <span>Current Price</span>
-          <strong id="currentPrice">--</strong>
-        </article>
-        <article class="stat-card">
-          <span>Day Change</span>
-          <strong id="dayChange">--</strong>
-        </article>
-        <article class="stat-card">
-          <span>Period High</span>
-          <strong id="periodHigh">--</strong>
-        </article>
-        <article class="stat-card">
-          <span>Period Low</span>
-          <strong id="periodLow">--</strong>
-        </article>
-        <article class="stat-card">
-          <span>Volatility Score</span>
-          <strong id="volatilityScore">--</strong>
-        </article>
-        <article class="stat-card">
-          <span>Last Updated</span>
-          <strong id="lastUpdated">--</strong>
-        </article>
-        <article class="stat-card">
-          <span>7-Day Forecast</span>
-          <strong id="forecastPrice">--</strong>
-        </article>
-        <article class="stat-card">
-          <span>Forecast Trend</span>
-          <strong id="forecastTrend">--</strong>
-        </article>
-      </section>
-
-      <section class="chart-panel">
-        <div class="panel-header">
-          <div>
-            <h2>Price Trend</h2>
-            <p>Close price with moving averages and a short-term trend projection.</p>
-          </div>
+        <div class="sidebar-section">
+          <h2 class="sidebar-title">Companies</h2>
+          <div class="company-list" id="companyList"></div>
         </div>
-        <canvas id="priceChart"></canvas>
-      </section>
+      </aside>
 
-      <section class="compare-panel">
-        <div class="panel-header">
-          <div>
-            <h2>Compare Stocks</h2>
-            <p>Normalized performance, starting at 100, over the same time window.</p>
-          </div>
-          <div class="compare-controls">
-            <select id="compareOne"></select>
-            <select id="compareTwo"></select>
-          </div>
-        </div>
-        <canvas id="compareChart"></canvas>
-      </section>
+      <section class="dashboard-main">
+        <section class="hero-panel">
+          <p class="section-kicker">Selected Company</p>
+          <h2 id="selectedCompanyTitle">Loading...</h2>
+          <p id="selectedCompanySubtitle" class="panel-copy">
+            Live market data, moving averages, and 52-week summary metrics.
+          </p>
+        </section>
 
-      <p class="status-message" id="statusMessage">Loading market data...</p>
+        <section class="summary-grid" id="summaryGrid">
+          <article class="stat-card">
+            <span>Current Price</span>
+            <strong id="currentPrice">--</strong>
+          </article>
+          <article class="stat-card">
+            <span>Day Change</span>
+            <strong id="dayChange">--</strong>
+          </article>
+          <article class="stat-card">
+            <span>52-Week High</span>
+            <strong id="week52High">--</strong>
+          </article>
+          <article class="stat-card">
+            <span>52-Week Low</span>
+            <strong id="week52Low">--</strong>
+          </article>
+          <article class="stat-card">
+            <span>Average Close</span>
+            <strong id="averageClose">--</strong>
+          </article>
+          <article class="stat-card">
+            <span>Volatility Score</span>
+            <strong id="volatilityScore">--</strong>
+          </article>
+          <article class="stat-card">
+            <span>Last Updated</span>
+            <strong id="lastUpdated">--</strong>
+          </article>
+          <article class="stat-card">
+            <span>7-Day Forecast</span>
+            <strong id="forecastPrice">--</strong>
+          </article>
+          <article class="stat-card">
+            <span>Forecast Trend</span>
+            <strong id="forecastTrend">--</strong>
+          </article>
+        </section>
+
+        <section class="chart-panel">
+          <div class="panel-header">
+            <div>
+              <h2>Closing Price Chart</h2>
+              <p>Historical close price with 7-day, 20-day, and forecast trend lines.</p>
+            </div>
+          </div>
+          <canvas id="priceChart"></canvas>
+        </section>
+
+        <section class="compare-panel">
+          <div class="panel-header">
+            <div>
+              <h2>Compare Two Stocks</h2>
+              <p>Normalized performance comparison for the selected date range.</p>
+            </div>
+            <div class="compare-controls">
+              <select id="compareOne"></select>
+              <select id="compareTwo"></select>
+            </div>
+          </div>
+          <canvas id="compareChart"></canvas>
+        </section>
+
+        <p class="status-message" id="statusMessage">Loading market data...</p>
+      </section>
     </main>
 
     <script src="{{ url_for('static', filename='app.js') }}"></script>

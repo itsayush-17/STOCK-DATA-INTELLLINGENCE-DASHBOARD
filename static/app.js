@@ -1,4 +1,4 @@
-const companySelect = document.getElementById("companySelect");
+const companyList = document.getElementById("companyList");
 const periodSelect = document.getElementById("periodSelect");
 const compareOne = document.getElementById("compareOne");
 const compareTwo = document.getElementById("compareTwo");
@@ -6,6 +6,8 @@ const statusMessage = document.getElementById("statusMessage");
 
 let priceChart;
 let compareChart;
+let companies = [];
+let selectedSymbol = "INFY";
 
 const formatCurrency = (value) =>
   new Intl.NumberFormat("en-IN", {
@@ -19,14 +21,43 @@ const setStatus = (message, isError = false) => {
   statusMessage.classList.toggle("negative", isError);
 };
 
-const fillSelect = (select, items, selectedSymbol) => {
+const fillSelect = (select, items, selectedValue) => {
   select.innerHTML = "";
   items.forEach((company) => {
     const option = document.createElement("option");
     option.value = company.symbol;
     option.textContent = `${company.symbol} - ${company.name}`;
-    option.selected = company.symbol === selectedSymbol;
+    option.selected = company.symbol === selectedValue;
     select.appendChild(option);
+  });
+};
+
+const renderCompanyList = (items) => {
+  companyList.innerHTML = "";
+
+  items.forEach((company) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = `company-item${company.symbol === selectedSymbol ? " active" : ""}`;
+    button.innerHTML = `
+      <span class="company-symbol">${company.symbol}</span>
+      <span class="company-name">${company.name}</span>
+    `;
+    button.addEventListener("click", async () => {
+      if (selectedSymbol === company.symbol) {
+        return;
+      }
+
+      selectedSymbol = company.symbol;
+      renderCompanyList(companies);
+
+      try {
+        await refreshSingleStockView();
+      } catch (error) {
+        setStatus(error.message, true);
+      }
+    });
+    companyList.appendChild(button);
   });
 };
 
@@ -36,11 +67,15 @@ const updateSummaryCards = (summary, forecast) => {
   const changeText = `${summary.price_change >= 0 ? "+" : ""}${formatCurrency(summary.price_change)} (${summary.price_change_pct}%)`;
   const forecastChangeText = `${forecast.trend} (${forecast.projected_change_pct >= 0 ? "+" : ""}${forecast.projected_change_pct}%)`;
 
+  document.getElementById("selectedCompanyTitle").textContent = `${summary.symbol} - ${summary.name}`;
+  document.getElementById("selectedCompanySubtitle").textContent =
+    "Daily returns, moving averages, 52-week summary metrics, and a lightweight prediction line.";
   document.getElementById("currentPrice").textContent = formatCurrency(summary.current_price);
   changeElement.textContent = changeText;
   changeElement.className = summary.price_change >= 0 ? "positive" : "negative";
-  document.getElementById("periodHigh").textContent = formatCurrency(summary.period_high);
-  document.getElementById("periodLow").textContent = formatCurrency(summary.period_low);
+  document.getElementById("week52High").textContent = formatCurrency(summary.week_52_high);
+  document.getElementById("week52Low").textContent = formatCurrency(summary.week_52_low);
+  document.getElementById("averageClose").textContent = formatCurrency(summary.average_close);
   document.getElementById("volatilityScore").textContent = `${summary.volatility_score}%`;
   document.getElementById("lastUpdated").textContent = summary.last_updated;
   document.getElementById("forecastPrice").textContent = formatCurrency(forecast.projected_close);
@@ -91,7 +126,7 @@ const renderPriceChart = (payload, forecast) => {
           tension: 0.25,
         },
         {
-          label: `${forecast.future_days}-Day Projection`,
+          label: `${forecast.future_days}-Day Prediction`,
           data: projectedValues,
           borderColor: "#b85042",
           borderDash: [8, 6],
@@ -157,20 +192,21 @@ const fetchJson = async (url) => {
 };
 
 const refreshSingleStockView = async () => {
-  const symbol = companySelect.value;
   const days = periodSelect.value;
 
-  setStatus(`Loading ${symbol} market snapshot...`);
+  setStatus(`Loading ${selectedSymbol} market snapshot...`);
 
   const [summary, series, forecast] = await Promise.all([
-    fetchJson(`/api/summary/${symbol}?days=${days}`),
-    fetchJson(`/api/data/${symbol}?days=${days}`),
-    fetchJson(`/api/forecast/${symbol}?days=${days}&future_days=7`),
+    fetchJson(`/summary/${selectedSymbol}`),
+    fetchJson(`/data/${selectedSymbol}?days=${days}`),
+    fetchJson(`/api/forecast/${selectedSymbol}?days=${days}&future_days=7`),
   ]);
 
   updateSummaryCards(summary, forecast);
   renderPriceChart(series, forecast);
-  setStatus(`Showing ${symbol} for the last ${days} trading days with a 7-day projection.`);
+  setStatus(
+    `Showing ${selectedSymbol} for the last ${days} trading days with a 7-day prediction line.`
+  );
 };
 
 const refreshCompareView = async () => {
@@ -179,28 +215,21 @@ const refreshCompareView = async () => {
   const days = periodSelect.value;
 
   const comparison = await fetchJson(
-    `/api/compare?symbol1=${symbol1}&symbol2=${symbol2}&days=${days}`
+    `/compare?symbol1=${symbol1}&symbol2=${symbol2}&days=${days}`
   );
   renderCompareChart(comparison);
 };
 
 const initializeDashboard = async () => {
   try {
-    const companies = await fetchJson("/api/companies");
-    fillSelect(companySelect, companies, companies[0].symbol);
+    companies = await fetchJson("/companies");
+    selectedSymbol = companies[0].symbol;
+    renderCompanyList(companies);
     fillSelect(compareOne, companies, companies[0].symbol);
     fillSelect(compareTwo, companies, companies[1].symbol);
 
     await refreshSingleStockView();
     await refreshCompareView();
-
-    companySelect.addEventListener("change", async () => {
-      try {
-        await refreshSingleStockView();
-      } catch (error) {
-        setStatus(error.message, true);
-      }
-    });
 
     periodSelect.addEventListener("change", async () => {
       try {
