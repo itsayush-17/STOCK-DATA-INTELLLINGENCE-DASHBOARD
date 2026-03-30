@@ -2,6 +2,7 @@ import os
 
 from flask import Flask, jsonify, render_template, request
 
+from database import init_db
 from services.stock_service import (
     StockDataError,
     StockDataService,
@@ -10,6 +11,7 @@ from services.stock_service import (
 
 def create_app() -> Flask:
     app = Flask(__name__)
+    init_db()
     stock_service = StockDataService()
 
     def _parse_future_days(default: int = 7) -> int:

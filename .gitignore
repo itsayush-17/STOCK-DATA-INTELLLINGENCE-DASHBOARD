@@ -5,3 +5,4 @@ __pycache__/
 *.log
 .pytest_cache/
 .mypy_cache/
+stock_dashboard.db

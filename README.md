@@ -1,6 +1,6 @@
 # Stock Intelligence Dashboard
 
-A mini stock market analytics system built with Flask, Pandas, NumPy, and yfinance. The project fetches live NSE stock data, computes useful market indicators, exposes backend APIs, and presents the results in a clean dashboard.
+A mini stock market analytics system built with Flask, Pandas, NumPy, SQLite, and yfinance. The project fetches live NSE stock data, computes useful market indicators, stores cached history in SQLite, exposes backend APIs, and presents the results in a clean dashboard.
 
 This is designed as a strong assignment submission: simple enough to finish reliably, but polished enough to demonstrate backend, data-processing, API design, and frontend integration skills.
 
@@ -9,6 +9,7 @@ This is designed as a strong assignment submission: simple enough to finish reli
 - Python backend development with Flask
 - Data handling and transformation with Pandas
 - Analytical calculations like moving averages, volatility, and returns
+- Local persistence with SQLite caching
 - REST API design for dashboards
 - Frontend integration with Chart.js
 - Basic deployment readiness with Gunicorn, Docker, and Render config
@@ -26,7 +27,7 @@ This is designed as a strong assignment submission: simple enough to finish reli
 ## Tech Stack
 
 - Backend: Flask
-- Data: Pandas, NumPy
+- Data: Pandas, NumPy, SQLite
 - Market data source: yfinance
 - Frontend: HTML, CSS, JavaScript, Chart.js
 - Deployment: Gunicorn, Docker, Render
@@ -44,6 +45,7 @@ StockDataService
      +--> moving averages
      +--> volatility
      +--> forecast projection
+     +--> SQLite cache
      |
      v
 Flask API
@@ -63,6 +65,7 @@ Dashboard UI
 ```text
 .
 |-- app.py
+|-- database.py
 |-- wsgi.py
 |-- requirements.txt
 |-- Procfile
@@ -163,6 +166,7 @@ This repo is ready for basic deployment:
 - `render.yaml` helps bootstrap a Render web service
 - `Dockerfile` supports container deployment
 - `postman/Stock-Intelligence-Dashboard.postman_collection.json` is included for API testing
+- `stock_dashboard.db` is created automatically as the local SQLite cache when the app runs
 
 Production command:
 
@@ -184,6 +188,7 @@ gunicorn wsgi:app
 - `days` must be between `5` and `365`
 - `future_days` must be between `3` and `30`
 - The forecast is a lightweight trend projection for demonstration purposes, not financial advice
+- SQLite is used as a local persistence layer for cached stock history
 - On this machine, the project was verified successfully with `.venv314\Scripts\python.exe`
 
 ## Possible Future Improvements

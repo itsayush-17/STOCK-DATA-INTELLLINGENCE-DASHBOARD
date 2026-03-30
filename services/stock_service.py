@@ -7,6 +7,8 @@ import certifi
 import numpy as np
 import pandas as pd
 
+from database import cache_stock_data, load_cached_stock_data
+
 # Some Anaconda builds expose `certifi` without a `where()` helper, while
 # `yfinance` requires it through `curl_cffi`.
 if not hasattr(certifi, "where"):
@@ -41,27 +43,52 @@ class StockDataService:
         return company
 
     def _load_history(self, symbol: str) -> pd.DataFrame:
+        cached_frame = load_cached_stock_data(symbol)
+
         if yf is None:
+            if not cached_frame.empty:
+                return cached_frame
             raise RuntimeError(
-                "yfinance is not installed. Run `pip install -r requirements.txt`."
+                "yfinance is not installed and no SQLite cache is available. "
+                "Run `pip install -r requirements.txt`."
             )
 
-        ticker = self._resolve_company(symbol)["ticker"]
-        frame = yf.download(
+        try:
+            ticker = self._resolve_company(symbol)["ticker"]
+            frame = self._download_history_frame(ticker, symbol)
+            cache_stock_data(symbol, frame)
+            return frame
+        except Exception:
+            if not cached_frame.empty:
+                return cached_frame
+            raise
+
+    def _download_history_frame(self, ticker: str, symbol: str) -> pd.DataFrame:
+        download_attempt = yf.download(
             ticker,
             period=self.history_period,
             interval="1d",
             progress=False,
             auto_adjust=False,
+            threads=False,
         )
 
-        if frame.empty:
+        if download_attempt.empty:
+            download_attempt = yf.Ticker(ticker).history(
+                period=self.history_period,
+                interval="1d",
+                auto_adjust=False,
+            )
+
+        if download_attempt.empty:
             raise StockDataError(f"No market data available for '{symbol.upper()}'.")
 
-        if isinstance(frame.columns, pd.MultiIndex):
-            frame.columns = [column[0] for column in frame.columns.to_flat_index()]
+        if isinstance(download_attempt.columns, pd.MultiIndex):
+            download_attempt.columns = [
+                column[0] for column in download_attempt.columns.to_flat_index()
+            ]
 
-        frame = frame.reset_index()
+        frame = download_attempt.reset_index()
         date_column = "Date" if "Date" in frame.columns else frame.columns[0]
         frame[date_column] = pd.to_datetime(frame[date_column]).dt.tz_localize(None)
         frame = frame.rename(columns={date_column: "Date"})
