@@ -1,200 +1,135 @@
-# Stock Intelligence Dashboard
+# Smart Investment & Portfolio Analytics
 
-A mini stock market analytics system built with Flask, Pandas, NumPy, SQLite, and yfinance. The project fetches live NSE stock data, computes useful market indicators, stores cached history in SQLite, exposes backend APIs, and presents the results in a clean dashboard.
+An India-focused investment decision-support platform that analyzes a user's income, expenses, risk tolerance, financial goals, current portfolio, and market conditions to generate data-driven allocation guidance and scenario planning.
 
-This is designed as a strong assignment submission: simple enough to finish reliably, but polished enough to demonstrate backend, data-processing, API design, and frontend integration skills.
+> **Disclaimer**: This repository is positioned as an educational analytics tool, not a source of guaranteed financial advice. Returns and risk estimates are model-driven assumptions, not guarantees. Historical patterns and simulated outcomes do not ensure future performance. Users should validate important financial decisions with licensed professionals.
 
-## What This Project Shows
+---
 
-- Python backend development with Flask
-- Data handling and transformation with Pandas
-- Analytical calculations like moving averages, volatility, and returns
-- Local persistence with SQLite caching
-- REST API design for dashboards
-- Frontend integration with Chart.js
-- Basic deployment readiness with Gunicorn, Docker, and Render config
+## Key Features
 
-## Core Features
+- **Personalized Investment Planning**: Analyzes income, expenses, financial goals, and risk posture.
+- **Emergency-Fund Readiness Checks**: Verifies safety-net coverage before recommending aggressive allocations.
+- **Goal-Based SIP Planning**: Calculates required monthly SIPs for major life events and retirement.
+- **Portfolio Analytics & Diagnostics**: Evaluates diversification, sector concentration, target alignment, and health scoring.
+- **Monte Carlo Scenario Simulation**: Runs 1,000-path stochastic simulations for conservative (10th percentile), base (50th percentile), and optimistic (90th percentile) outcomes.
+- **India-Focused Market & Macro Dashboard**: Tracks Indian indices (NIFTY 50, SENSEX, Midcaps), global context, RBI repo rate, CPI inflation, yield curves, and USD/INR rates.
+- **Plain-Language Explanation Layer**: Translates quantitative metrics into clear, actionable executive takeaways.
 
-- Left-side clickable company list for `INFY`, `TCS`, and `RELIANCE`
-- Historical stock data view for 30, 60, or 90 days
-- Summary cards for current price, 52-week high/low, average close, volatility, and daily change
-- 7-day and 20-day moving average visualization
-- Stock comparison chart using normalized performance
-- Short-term 7-business-day forecast using a simple linear trend projection
-- Health endpoint and production entrypoint for deployment
+---
 
-## Tech Stack
-
-- Backend: Flask
-- Data: Pandas, NumPy, SQLite
-- Market data source: yfinance
-- Frontend: HTML, CSS, JavaScript, Chart.js
-- Deployment: Gunicorn, Docker, Render
-
-## Architecture
+## System Architecture
 
 ```text
-Yahoo Finance
-     |
-     v
-StockDataService
-     |
-     +--> data cleaning
-     +--> returns
-     +--> moving averages
-     +--> volatility
-     +--> forecast projection
-     +--> SQLite cache
-     |
-     v
-Flask API
-     |
-     +--> /companies
-     +--> /data/<symbol>
-     +--> /summary/<symbol>
-     +--> /api/forecast/<symbol>
-     +--> /compare
-     |
-     v
-Dashboard UI
+Market + Macro Inputs
+        |
+        v
+Seeded Data / Future ETL Layer
+        |
+        v
+Analytics Engine
+  - cash flow
+  - emergency fund
+  - risk score
+  - allocation model
+  - portfolio review
+  - goal planning
+  - simulation
+        |
+        v
+Local API Server
+        |
+        v
+Interactive Dashboard
 ```
+
+---
 
 ## Project Structure
 
 ```text
-.
-|-- app.py
-|-- database.py
-|-- wsgi.py
-|-- requirements.txt
-|-- Procfile
-|-- render.yaml
-|-- Dockerfile
-|-- postman/
-|   `-- Stock-Intelligence-Dashboard.postman_collection.json
-|-- services/
-|   `-- stock_service.py
-|-- static/
-|   |-- app.js
-|   `-- style.css
-`-- templates/
-    `-- index.html
+backend/
+  analytics/
+    __init__.py
+    engine.py
+    seed.py
+  server.py
+  tests_smoke.py
+frontend/
+  app.js
+  index.html
+  styles.css
+.github/
+  ISSUE_TEMPLATE/
+    bug_report.md
+  workflows/
+    ci.yml
+CODE_OF_CONDUCT.md
+CONTRIBUTING.md
+LICENSE
+README.md
+SECURITY.md
+requirements.txt
+requirements-dev.txt
 ```
 
-## Local Setup
+---
 
-1. Create and activate a virtual environment:
+## Quickstart & Setup
 
+1. **Clone the repository**:
+   ```bash
+   git clone https://github.com/itsayush-17/smart-investment-portfolio-analytics.git
+   cd smart-investment-portfolio-analytics
+   ```
+
+2. **Create and activate virtual environment**:
    ```bash
    python -m venv .venv
    .venv\Scripts\activate
    ```
 
-2. Install dependencies:
-
+3. **Install dependencies**:
    ```bash
    pip install -r requirements.txt
+   pip install -r requirements-dev.txt
    ```
 
-3. Run the app:
-
+4. **Launch local server**:
    ```bash
-   python app.py
+   python backend/server.py
    ```
 
-4. Open:
+5. **Open Dashboard**:
+   Navigate to [http://127.0.0.1:8000](http://127.0.0.1:8000) in your web browser.
 
-   ```text
-   http://127.0.0.1:5000
+6. **Run Smoke Tests**:
+   ```bash
+   pytest backend/tests_smoke.py
    ```
 
-If your default Python setup is unstable, this workspace also includes a verified environment:
-
-```bash
-.venv314\Scripts\activate
-python app.py
-```
+---
 
 ## API Endpoints
 
-- `GET /companies`
-- `GET /data/<symbol>?days=30`
-- `GET /summary/<symbol>`
-- `GET /compare?symbol1=INFY&symbol2=TCS&days=30`
-- `GET /api/forecast/<symbol>?days=30&future_days=7`
-- `GET /health`
+- `GET /api/bootstrap` - Returns the seeded analysis payload, user profile, and market snapshot for initial page load.
+- `GET /api/analyze` - Returns the default analysis payload.
+- `POST /api/analyze` - Accepts a partial or full user profile payload and recalculates all analytics responses in real time.
 
-### Example Response: `/summary/INFY`
+---
 
-```json
-{
-  "symbol": "INFY",
-  "name": "Infosys Ltd.",
-  "period": "52-week",
-  "current_price": 1524.8,
-  "price_change": 18.45,
-  "price_change_pct": 1.22,
-  "week_52_high": 1588.3,
-  "week_52_low": 1451.2,
-  "average_close": 1512.9,
-  "volatility_score": 1.84,
-  "last_updated": "2026-03-30"
-}
-```
+## Future Roadmap
 
-### Example Response: `/api/forecast/INFY?days=30&future_days=7`
+- Replace seeded market data with scheduled ingestion from trusted live market APIs
+- Upgrade the server layer to FastAPI
+- Persist users, goals, and transactions in PostgreSQL
+- Add authentication and multi-user support
+- Add downloadable PDF reports and richer interactive visualizations
+- Introduce historical portfolio tracking and rebalancing alerts
 
-```json
-{
-  "symbol": "INFY",
-  "future_days": 7,
-  "method": "Linear trend projection based on recent closing prices.",
-  "latest_close": 1524.8,
-  "projected_close": 1541.3,
-  "projected_change_pct": 1.08,
-  "trend": "Bullish"
-}
-```
+---
 
-## Deployment
+## Contributing & License
 
-This repo is ready for basic deployment:
-
-- `wsgi.py` exposes the Flask app for Gunicorn
-- `Procfile` works for platforms like Render or Railway
-- `render.yaml` helps bootstrap a Render web service
-- `Dockerfile` supports container deployment
-- `postman/Stock-Intelligence-Dashboard.postman_collection.json` is included for API testing
-- `stock_dashboard.db` is created automatically as the local SQLite cache when the app runs
-
-Production command:
-
-```bash
-gunicorn wsgi:app
-```
-
-## Why This Stands Out In A Submission
-
-- It covers the full stack instead of stopping at data analysis
-- The APIs are structured cleanly and are easy to test
-- The dashboard is simple, readable, and actually useful
-- The compare view and forecast feature add bonus value without overcomplicating the project
-- The repository includes deployment support, which makes the project feel more complete
-
-## Important Notes
-
-- Supported symbols are currently limited to `INFY`, `TCS`, and `RELIANCE`
-- `days` must be between `5` and `365`
-- `future_days` must be between `3` and `30`
-- The forecast is a lightweight trend projection for demonstration purposes, not financial advice
-- SQLite is used as a local persistence layer for cached stock history
-- On this machine, the project was verified successfully with `.venv314\Scripts\python.exe`
-
-## Possible Future Improvements
-
-- Add more NSE companies dynamically
-- Cache API responses to reduce repeated Yahoo Finance calls
-- Add candlestick charts
-- Add export-to-CSV support
-- Replace the simple forecast with a stronger time-series model
+Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request.  
+This project is licensed under the [MIT License](LICENSE).
