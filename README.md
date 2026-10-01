@@ -79,8 +79,8 @@ requirements-dev.txt
 
 1. **Clone the repository**:
    ```bash
-   git clone https://github.com/itsayush-17/smart-investment-portfolio-analytics.git
-   cd smart-investment-portfolio-analytics
+   git clone https://github.com/itsayush-17/STOCK-DATA-INTELLLINGENCE-DASHBOARD.git
+   cd STOCK-DATA-INTELLLINGENCE-DASHBOARD
    ```
 
 2. **Create and activate virtual environment**:
