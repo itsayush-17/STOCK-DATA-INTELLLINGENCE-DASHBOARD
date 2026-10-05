@@ -1,36 +1,58 @@
-# Contributing to Smart Investment & Portfolio Analytics
+# Contributing Guide
 
-Thank you for your interest in contributing! We welcome contributions to financial modeling, engine features, UI enhancements, and documentation.
+Thanks for your interest in improving Smart Investment & Portfolio Analytics.
 
-## Development Workflow
+## Ways to Contribute
 
-1. Fork and clone the repository:
-   ```bash
-   git clone https://github.com/itsayush-17/smart-investment-portfolio-analytics.git
-   cd smart-investment-portfolio-analytics
-   ```
+- Report bugs
+- Suggest improvements to the analytics logic or UX
+- Improve documentation
+- Add tests
+- Contribute new features aligned with the project roadmap
 
-2. Create a virtual environment and install dependencies:
-   ```bash
-   python -m venv .venv
-   .venv\Scripts\activate
-   pip install -r requirements.txt
-   pip install -r requirements-dev.txt
-   ```
+## Development Setup
 
-3. Run the local development server:
-   ```bash
-   python backend/server.py
-   ```
-   Open `http://127.0.0.1:8000` in your web browser.
+```powershell
+python -m venv .venv
+.venv\Scripts\activate
+pip install -r requirements.txt
+pip install -r requirements-dev.txt
+```
 
-4. Run the smoke test suite before opening a pull request:
-   ```bash
-   pytest backend/tests_smoke.py
-   ```
+Run the application:
 
-## Pull Request Guidelines
+```powershell
+python backend/server.py
+```
 
-- Keep changes focused and well-documented.
-- Ensure all tests pass cleanly.
-- Maintain code cleanliness and follow PEP 8 style standards for Python code.
+Run tests:
+
+```powershell
+pytest backend/tests_smoke.py
+```
+
+## Contribution Expectations
+
+- Keep changes focused and well-scoped
+- Prefer readable code over clever code
+- Add or update tests when behavior changes
+- Update documentation when setup, architecture, or features change
+- Avoid mixing refactors with unrelated functional changes
+
+## Pull Request Checklist
+
+- The branch is up to date with `main`
+- The feature or fix is clearly explained
+- Tests were added or updated when appropriate
+- Local tests pass
+- Documentation was updated where needed
+
+## Project Scope Notes
+
+- This project is an educational analytics platform
+- Do not market outputs as guaranteed financial advice
+- Preserve the India-focused investment context unless a change intentionally broadens scope
+
+## Communication
+
+For larger changes, open an issue first so the direction can be discussed before implementation begins.

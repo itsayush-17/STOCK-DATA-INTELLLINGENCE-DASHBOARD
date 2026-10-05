@@ -1,19 +1,28 @@
-# Contributor Covenant Code of Conduct
+# Code of Conduct
 
-## Our Pledge
-
-We as members, contributors, and leaders pledge to make participation in our community a harassment-free experience for everyone, regardless of age, body size, visible or invisible disability, ethnicity, sex characteristics, gender identity and expression, level of experience, education, socio-economic status, nationality, personal appearance, race, religion, or sexual identity and orientation.
+This project aims to be welcoming, respectful, and constructive for everyone who contributes.
 
 ## Our Standards
 
-Examples of behavior that contributes to a positive environment:
-- Demonstrating empathy and kindness toward other people
-- Being respectful of differing opinions, viewpoints, and experiences
-- Giving and gracefully accepting constructive feedback
-- Accepting responsibility and apologizing to those affected by our mistakes
+Contributors are expected to:
 
-Examples of unacceptable behavior:
-- The use of sexualized language or imagery, and sexual attention or advances
-- Trolling, insulting or derogatory comments, and personal or political attacks
-- Public or private harassment
-- Publishing others' private information without explicit permission
+- Communicate respectfully
+- Give feedback in a constructive and specific way
+- Assume good intent while staying honest about problems
+- Focus discussion on ideas, code, and outcomes rather than people
+- Help keep the project inclusive for learners and experienced builders alike
+
+Unacceptable behavior includes:
+
+- Harassment or personal attacks
+- Discriminatory or hateful language
+- Intimidation, trolling, or bad-faith disruption
+- Sharing private information without permission
+
+## Enforcement
+
+Project maintainers may remove comments, issues, pull requests, or contributors whose behavior harms the health of the project.
+
+## Reporting
+
+If you experience or witness unacceptable behavior, open a private channel with the maintainer instead of escalating in public discussion threads.

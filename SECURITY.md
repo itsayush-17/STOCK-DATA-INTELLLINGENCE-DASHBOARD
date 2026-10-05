@@ -1,11 +1,27 @@
 # Security Policy
 
+## Supported Status
+
+This repository is currently maintained as an actively developed project prototype.
+
 ## Reporting a Vulnerability
 
-If you discover a potential security vulnerability within Smart Investment & Portfolio Analytics, please report it directly by opening a GitHub Security Advisory or contacting the repository owner.
+Please do not open public issues for security-sensitive findings.
 
-Please do not report security vulnerabilities through public GitHub issues.
+Instead:
+
+- Contact the maintainer privately
+- Include steps to reproduce the issue
+- Describe the impact and any suggested mitigation
+
+You can expect a good-faith review and a coordinated response for legitimate reports.
 
 ## Scope
 
-This software is an educational decision-support tool operating as a local client-side / local-server platform without multi-tenant authentication or persistent payment integrations.
+This policy especially applies to:
+
+- dependency vulnerabilities
+- server-side request handling
+- data exposure risks
+- unsafe configuration defaults
+- authentication or authorization issues if those features are added later

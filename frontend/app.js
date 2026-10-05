@@ -1,724 +1,580 @@
-/**
- * Smart Wealth Intelligence - Frontend Application Logic
- * Multi-tab navigation, financial glossary, interactive tooltips, and analytics rendering.
- */
+const state = {
+  analysis: null,
+  market: null,
+};
 
-document.addEventListener("DOMContentLoaded", () => {
-  // Global state store
-  let currentProfileData = null;
-  let chartInstances = {};
+function showStatus(message) {
+  const status = document.getElementById("app-status");
+  status.textContent = message;
+  status.classList.add("is-visible");
+  window.setTimeout(() => status.classList.remove("is-visible"), 5000);
+}
 
-  // Glossary Data Dictionary
-  const glossaryData = [
+async function readJson(response) {
+  const payload = await response.json();
+  if (!response.ok) {
+    throw new Error(payload.error || "The analytics request could not be completed.");
+  }
+  return payload;
+}
+
+function formatCurrency(value) {
+  return new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    maximumFractionDigits: 0,
+  }).format(value || 0);
+}
+
+function formatPercent(value) {
+  return `${Number(value).toFixed(1)}%`;
+}
+
+function formatCompactCurrency(value) {
+  return new Intl.NumberFormat("en-IN", {
+    notation: "compact",
+    maximumFractionDigits: 1,
+  }).format(value || 0);
+}
+
+function statusClass(signal) {
+  if (signal === "positive" || signal === "stable") {
+    return "status-positive";
+  }
+  if (signal === "watch" || signal === "neutral") {
+    return "status-watch";
+  }
+  return "status-alert";
+}
+
+function createBarRows(items, valueKey, formatter, variant = "") {
+  const max = Math.max(...items.map((item) => Number(item[valueKey]) || 0), 1);
+  return `
+    <div class="bar-chart">
+      ${items
+        .map((item) => {
+          const width = ((Number(item[valueKey]) || 0) / max) * 100;
+          return `
+            <div class="bar-row">
+              <div class="bar-label">
+                <span>${item.name}</span>
+                <span>${formatter(item[valueKey])}</span>
+              </div>
+              <div class="bar-track">
+                <div class="bar-fill ${variant}" style="width: ${width}%;"></div>
+              </div>
+            </div>
+          `;
+        })
+        .join("")}
+    </div>
+  `;
+}
+
+function fillSummaryGrid(analysis, market) {
+  const metrics = [
     {
-      term: "SIP (Systematic Investment Plan)",
-      category: "basics",
-      def: "A method of investing a fixed rupee amount into a mutual fund at regular intervals (usually monthly).",
-      analogy: "💡 Like a monthly gym subscription for your savings — you build wealth steadily without worrying about timing the market."
+      label: "Investable Surplus",
+      value: formatCurrency(analysis.cash_flow.investable_surplus),
+      note: `After ${formatCurrency(analysis.cash_flow.total_expenses)} in monthly expenses.`,
     },
     {
-      term: "Asset Allocation",
-      category: "basics",
-      def: "Dividing your total investment capital among different asset buckets like Stocks, Gold, Debt/FDs, and Cash.",
-      analogy: "💡 Don't put all your eggs in one basket. If stock markets drop, your Gold and FD reserves keep your net worth safe."
+      label: "Risk Profile",
+      value: `${analysis.risk_profile.label} (${analysis.risk_profile.score})`,
+      note: "Illustrative risk category from the example inputs.",
     },
     {
-      term: "Emergency Fund",
-      category: "basics",
-      def: "A cash reserve equivalent to 3 to 6 months of living expenses held in liquid bank accounts or fixed deposits.",
-      analogy: "💡 A financial shock-absorber so unexpected medical bills or job transitions never force you to sell long-term stocks at a loss."
+      label: "Portfolio Health",
+      value: `${analysis.portfolio.health_score}/100`,
+      note: `${analysis.portfolio.concentration_risk} concentration risk.`,
     },
     {
-      term: "Portfolio Health Score",
-      category: "risk",
-      def: "A composite 0-100 diagnostic score assessing your asset mix, risk alignment, emergency safety buffer, and diversification.",
-      analogy: "💡 A regular health report card for your money: 80+ means excellent fitness, while below 50 means time for a check-up!"
+      label: "Sample Market Signal",
+      value: market.derived.market_regime,
+      note: `Sentiment score ${market.derived.sentiment_score}.`,
     },
-    {
-      term: "Monte Carlo Simulation",
-      category: "advanced",
-      def: "A statistical modeling technique that runs 1,000 randomized future market scenarios to calculate realistic wealth ranges.",
-      analogy: "💡 Like playing 1,000 simulated games of chess to see your best-case, average, and worst-case outcomes over 10 years."
-    },
-    {
-      term: "Market Regime",
-      category: "advanced",
-      def: "The overall prevailing climate of financial markets (e.g. Bullish, Fairly Valued, Overvalued, or High Volatility).",
-      analogy: "💡 The market weather report! Helps you decide whether to wear a raincoat (hold cash/FDs) or enjoy the sun (invest in equities)."
-    },
-    {
-      term: "CAGR (Compound Annual Growth Rate)",
-      category: "basics",
-      def: "The geometric mean return rate that provides a constant annual rate of return over a multi-year investment period.",
-      analogy: "💡 The true average speed your money grew year-after-year with compounding interest."
-    },
-    {
-      term: "Equity (Stocks)",
-      category: "assets",
-      def: "Buying shares of real ownership in companies (e.g., Reliance, TCS, HDFC). High growth potential over long periods.",
-      analogy: "💡 Becoming a mini-partner in top businesses and sharing in their future profit growth."
-    },
-    {
-      term: "Debt & Fixed Income",
-      category: "assets",
-      def: "Lending money to governments or top corporations in exchange for fixed, guaranteed interest payments (e.g. FDs, Bonds).",
-      analogy: "💡 A reliable rental income stream that guarantees capital preservation with low volatility."
-    },
-    {
-      term: "Gold & Precious Metals",
-      category: "assets",
-      def: "A physical or digital store of value that historically protects wealth against currency inflation and geopolitical crises.",
-      analogy: "💡 An insurance policy for your portfolio when global financial uncertainty rises."
-    },
-    {
-      term: "Rebalancing",
-      category: "risk",
-      def: "Selling a portion of asset classes that grew too large and buying underperforming ones to restore your target allocation.",
-      analogy: "💡 Trimming high-growing branches of a tree to keep the whole garden balanced and healthy."
-    },
-    {
-      term: "Diversification Score",
-      category: "risk",
-      def: "A rating measuring how well your money is distributed across uncorrelated assets and different industry sectors.",
-      analogy: "💡 Ensuring you own both umbrellas (gold/bonds) and sunglasses (stocks) so you profit in any weather."
-    }
   ];
 
-  // DOM Elements
-  const personaSelect = document.getElementById("personaSelect");
-  const btnRecalculate = document.getElementById("btnRecalculate");
-  const profileForm = document.getElementById("profileForm");
+  const template = document.getElementById("metric-template");
+  const grid = document.getElementById("summary-grid");
+  grid.innerHTML = "";
+  metrics.forEach((metric) => {
+    const fragment = template.content.cloneNode(true);
+    fragment.querySelector(".metric-label").textContent = metric.label;
+    fragment.querySelector(".metric-value").textContent = metric.value;
+    fragment.querySelector(".metric-note").textContent = metric.note;
+    grid.appendChild(fragment);
+  });
+}
 
-  // Form Inputs
-  const inputName = document.getElementById("inputName");
-  const inputAge = document.getElementById("inputAge");
-  const inputHorizon = document.getElementById("inputHorizon");
-  const inputIncome = document.getElementById("inputIncome");
-  const inputExpenses = document.getElementById("inputExpenses");
-  const inputEmergency = document.getElementById("inputEmergency");
-  const inputStability = document.getElementById("inputStability");
-  const valStability = document.getElementById("valStability");
-  const inputLossTolerance = document.getElementById("inputLossTolerance");
-  const valLossTolerance = document.getElementById("valLossTolerance");
+function fillCashFlowPanel(analysis) {
+  document.getElementById("cash-flow-panel").innerHTML = `
+    <p class="mini-label">Monthly Cash Flow</p>
+    <h3 class="big-number">${formatCurrency(analysis.cash_flow.monthly_income)}</h3>
+    <div class="inline-metrics">
+      <div class="mini-stat">
+        Essential
+        <strong>${formatCurrency(analysis.cash_flow.essential_expenses)}</strong>
+      </div>
+      <div class="mini-stat">
+        EMIs + Insurance
+        <strong>${formatCurrency(analysis.cash_flow.emi + analysis.cash_flow.insurance)}</strong>
+      </div>
+      <div class="mini-stat">
+        Discretionary
+        <strong>${formatCurrency(analysis.cash_flow.discretionary)}</strong>
+      </div>
+    </div>
+    <div class="stack">
+      ${createBarRows(
+        [
+          { name: "Essential", value: analysis.cash_flow.essential_expenses },
+          { name: "EMIs", value: analysis.cash_flow.emi },
+          { name: "Insurance", value: analysis.cash_flow.insurance },
+          { name: "Discretionary", value: analysis.cash_flow.discretionary },
+        ],
+        "value",
+        formatCurrency
+      )}
+    </div>
+  `;
+}
 
-  // Goals
-  const goalsListContainer = document.getElementById("goalsListContainer");
-  const btnAddGoal = document.getElementById("btnAddGoal");
-  const goalModal = document.getElementById("goalModal");
-  const btnCloseModal = document.getElementById("btnCloseModal");
-  const btnCancelGoal = document.getElementById("btnCancelGoal");
-  const addGoalForm = document.getElementById("addGoalForm");
-
-  // Term Modal Elements
-  const termModal = document.getElementById("termExplanationModal");
-  const btnCloseExpModal = document.getElementById("btnCloseExpModal");
-  const expModalTermTitle = document.getElementById("expModalTermTitle");
-  const expModalDef = document.getElementById("expModalDef");
-  const expModalAnalogy = document.getElementById("expModalAnalogy");
-
-  // Currency Formatters
-  function formatINR(val) {
-    if (val === undefined || val === null || isNaN(val)) return "₹0";
-    return new Intl.NumberFormat("en-IN", {
-      style: "currency",
-      currency: "INR",
-      maximumFractionDigits: 0
-    }).format(val);
-  }
-
-  function formatCompactINR(val) {
-    if (!val || isNaN(val)) return "₹0";
-    if (val >= 10000000) {
-      return `₹${(val / 10000000).toFixed(2)} Cr`;
-    } else if (val >= 100000) {
-      return `₹${(val / 100000).toFixed(2)} L`;
-    }
-    return formatINR(val);
-  }
-
-  // Application Initialization
-  async function init() {
-    setupNavigationTabs();
-    setupEventListeners();
-    setupGlossaryAndTooltips();
-    await fetchBootstrap();
-  }
-
-  // 1. Navigation Tab Switching
-  function setupNavigationTabs() {
-    const tabBtns = document.querySelectorAll(".nav-tab-btn");
-    const pages = document.querySelectorAll(".tab-page");
-
-    tabBtns.forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const targetTab = btn.getAttribute("data-tab");
-
-        tabBtns.forEach((b) => b.classList.remove("active"));
-        pages.forEach((p) => p.classList.remove("active"));
-
-        btn.classList.add("active");
-        const activePage = document.getElementById(targetTab);
-        if (activePage) activePage.classList.add("active");
-      });
-    });
-  }
-
-  // 2. Global Event Listeners
-  function setupEventListeners() {
-    // Slider values
-    inputStability.addEventListener("input", (e) => { valStability.textContent = e.target.value; });
-    inputLossTolerance.addEventListener("input", (e) => { valLossTolerance.textContent = e.target.value; });
-
-    // Persona Selector
-    personaSelect.addEventListener("change", async (e) => {
-      const selectedId = e.target.value;
-      if (!currentProfileData || !currentProfileData.preset_personas) return;
-      const personaObj = currentProfileData.preset_personas.find((p) => p.id === selectedId);
-      if (personaObj && personaObj.profile) {
-        populateForm(personaObj.profile);
-        await recalculatePlan();
-      }
-    });
-
-    // Form submission & recalculation
-    btnRecalculate.addEventListener("click", (e) => {
-      e.preventDefault();
-      recalculatePlan();
-    });
-
-    profileForm.addEventListener("submit", (e) => {
-      e.preventDefault();
-      recalculatePlan();
-    });
-
-    // Modal Goal Handlers
-    btnAddGoal.addEventListener("click", () => { goalModal.classList.add("active"); });
-    btnCloseModal.addEventListener("click", () => { goalModal.classList.remove("active"); });
-    btnCancelGoal.addEventListener("click", () => { goalModal.classList.remove("active"); });
-
-    addGoalForm.addEventListener("submit", (e) => {
-      e.preventDefault();
-      const newGoal = {
-        id: "g_" + Date.now(),
-        name: document.getElementById("newGoalName").value,
-        target_amount: parseFloat(document.getElementById("newGoalTarget").value),
-        timeline_years: parseFloat(document.getElementById("newGoalYears").value),
-        expected_return_pct: parseFloat(document.getElementById("newGoalReturn").value),
-        priority: document.getElementById("newGoalPriority").value
-      };
-
-      if (!currentProfileData.profile.goals) currentProfileData.profile.goals = [];
-      currentProfileData.profile.goals.push(newGoal);
-      goalModal.classList.remove("active");
-      addGoalForm.reset();
-      recalculatePlan();
-    });
-
-    // Term Explanation Modal Close
-    if (btnCloseExpModal) {
-      btnCloseExpModal.addEventListener("click", () => {
-        termModal.classList.remove("active");
-      });
-    }
-  }
-
-  // 3. Glossary Rendering & Search
-  function setupGlossaryAndTooltips() {
-    const gridContainer = document.getElementById("glossaryGridContainer");
-    const searchInput = document.getElementById("glossarySearchInput");
-    const pillBtns = document.querySelectorAll(".pill-btn");
-
-    function renderGlossary(filterText = "", category = "all") {
-      if (!gridContainer) return;
-      gridContainer.innerHTML = "";
-
-      const filtered = glossaryData.filter((item) => {
-        const matchesCat = category === "all" || item.category === category;
-        const matchesText = item.term.toLowerCase().includes(filterText.toLowerCase()) ||
-                            item.def.toLowerCase().includes(filterText.toLowerCase());
-        return matchesCat && matchesText;
-      });
-
-      if (filtered.length === 0) {
-        gridContainer.innerHTML = `<p style="color: var(--text-muted); font-size: 0.9rem; grid-column: 1 / -1;">No matching financial terms found.</p>`;
-        return;
-      }
-
-      filtered.forEach((item) => {
-        const card = document.createElement("div");
-        card.className = "glossary-card";
-        card.innerHTML = `
-          <div class="glossary-term-title">
-            <span>${item.term}</span>
-            <span class="badge badge-info" style="font-size:0.7rem;">${item.category}</span>
-          </div>
-          <p class="glossary-def">${item.def}</p>
-          <div class="glossary-analogy">${item.analogy}</div>
-        `;
-        gridContainer.appendChild(card);
-      });
-    }
-
-    // Search event
-    if (searchInput) {
-      searchInput.addEventListener("input", (e) => {
-        const activePill = document.querySelector(".pill-btn.active");
-        const cat = activePill ? activePill.getAttribute("data-category") : "all";
-        renderGlossary(e.target.value, cat);
-      });
-    }
-
-    // Category pills
-    pillBtns.forEach((pill) => {
-      pill.addEventListener("click", () => {
-        pillBtns.forEach((p) => p.classList.remove("active"));
-        pill.classList.add("active");
-        const cat = pill.getAttribute("data-category");
-        const query = searchInput ? searchInput.value : "";
-        renderGlossary(query, cat);
-      });
-    });
-
-    renderGlossary();
-
-    // Attach click handlers to any [?] tooltips across the UI
-    document.addEventListener("click", (e) => {
-      const tooltip = e.target.closest(".term-tooltip");
-      if (tooltip) {
-        const termName = tooltip.getAttribute("data-term");
-        showTermModal(termName);
-      }
-    });
-  }
-
-  function showTermModal(termName) {
-    const item = glossaryData.find((g) => g.term.toLowerCase().includes(termName.toLowerCase())) || {
-      term: termName,
-      def: "A financial parameter used in portfolio modeling and wealth management.",
-      analogy: "💡 Check the Financial Glossary tab for more details."
-    };
-
-    expModalTermTitle.innerHTML = `<i class="fa-solid fa-lightbulb text-amber"></i> ${item.term}`;
-    expModalDef.textContent = item.def;
-    expModalAnalogy.textContent = item.analogy;
-    termModal.classList.add("active");
-  }
-
-  // API Requests
-  async function fetchBootstrap() {
-    try {
-      const res = await fetch("/api/bootstrap");
-      const data = await res.json();
-      currentProfileData = data;
-      populateForm(data.profile);
-      renderDashboard(data);
-    } catch (err) {
-      console.error("Failed to fetch bootstrap analytics:", err);
-    }
-  }
-
-  async function recalculatePlan() {
-    const payload = extractFormData();
-    try {
-      const res = await fetch("/api/analyze", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-      });
-      const data = await res.json();
-      currentProfileData = data;
-      renderDashboard(data);
-    } catch (err) {
-      console.error("Failed to recalculate analytics:", err);
-    }
-  }
-
-  function populateForm(profile) {
-    if (!profile) return;
-    inputName.value = profile.name || "Investor";
-    inputAge.value = profile.age || 30;
-    inputHorizon.value = profile.horizon_years || 15;
-    inputIncome.value = profile.monthly_income || 150000;
-    inputExpenses.value = profile.monthly_expenses || 80000;
-    inputEmergency.value = profile.current_emergency_reserve || 300000;
-
-    const stab = profile.income_stability_score || 8;
-    inputStability.value = stab;
-    valStability.textContent = stab;
-
-    const loss = profile.loss_tolerance_score || 7;
-    inputLossTolerance.value = loss;
-    valLossTolerance.textContent = loss;
-  }
-
-  function extractFormData() {
-    const existingGoals = (currentProfileData && currentProfileData.profile) ? (currentProfileData.profile.goals || []) : [];
-    const existingPortfolio = (currentProfileData && currentProfileData.profile) ? (currentProfileData.profile.current_portfolio || {}) : {};
-
-    return {
-      name: inputName.value,
-      age: parseInt(inputAge.value, 10),
-      horizon_years: parseInt(inputHorizon.value, 10),
-      monthly_income: parseFloat(inputIncome.value),
-      monthly_expenses: parseFloat(inputExpenses.value),
-      current_emergency_reserve: parseFloat(inputEmergency.value),
-      income_stability_score: parseInt(inputStability.value, 10),
-      loss_tolerance_score: parseInt(inputLossTolerance.value, 10),
-      goals: existingGoals,
-      current_portfolio: existingPortfolio
-    };
-  }
-
-  // Dashboard Renderer
-  function renderDashboard(data) {
-    renderKPIs(data);
-    renderGoalsList(data.profile.goals || []);
-    renderEmergencyAndCashFlow(data);
-    renderHoldingsTable(data);
-    renderTargetAllocation(data);
-    renderGoalsTable(data.goal_plan);
-    renderPortfolioHealth(data);
-    renderMonteCarlo(data.simulation);
-    renderMarketRegimeAndInsights(data);
-  }
-
-  // 1. KPI Top Bar
-  function renderKPIs(data) {
-    const health = data.portfolio_analytics.health_score || 0;
-    document.getElementById("kpiHealthScore").textContent = health;
-    document.getElementById("barHealthScore").style.width = `${health}%`;
-    document.getElementById("kpiHealthDesc").textContent = getHealthDescription(health);
-
-    const cf = data.cash_flow;
-    document.getElementById("kpiSurplus").textContent = formatINR(cf.investable_surplus);
-    document.getElementById("kpiSavingsRate").textContent = `Savings Rate: ${cf.savings_rate_pct}%`;
-    document.getElementById("kpiIncomeExpenseSub").textContent = `Income: ${formatINR(cf.monthly_income)} | Expenses: ${formatINR(cf.monthly_expenses)}`;
-
-    const em = data.emergency_fund;
-    document.getElementById("kpiEmergencyStatus").textContent = em.status;
-    document.getElementById("kpiEmergencyStatus").className = `badge badge-${em.status.includes('Optimal') ? 'emerald' : 'amber'}`;
-    document.getElementById("barEmergency").style.width = `${em.readiness_pct}%`;
-    document.getElementById("kpiEmergencySub").textContent = `${em.months_covered} Months covered of ${em.target_months} Recommended`;
-
-    const rp = data.risk_profile;
-    document.getElementById("kpiRiskPosture").textContent = rp.posture;
-    document.getElementById("kpiRiskScoreBadge").textContent = `Risk Score: ${rp.risk_score} / 100`;
-    document.getElementById("kpiRiskHorizonSub").textContent = `Target Horizon: ${data.profile.horizon_years} Years`;
-  }
-
-  function getHealthDescription(score) {
-    if (score >= 80) return "Optimal Asset Mix & Low Vulnerability";
-    if (score >= 60) return "Good Alignment — Minor Adjustments Advised";
-    if (score >= 40) return "Moderate Risk — Action Plan Recommended";
-    return "Needs Rebalancing to Protect Capital";
-  }
-
-  // 2. Goals List
-  function renderGoalsList(goals) {
-    goalsListContainer.innerHTML = "";
-    if (!goals || goals.length === 0) {
-      goalsListContainer.innerHTML = `<p style="font-size:0.8rem; color:var(--text-subtle);">No financial goals configured yet.</p>`;
-      return;
-    }
-
-    goals.forEach((g) => {
-      const card = document.createElement("div");
-      card.className = "opportunity-card";
-      card.style.padding = "14px";
-      card.style.background = "rgba(15, 23, 42, 0.6)";
-      card.innerHTML = `
-        <div style="display:flex; justify-content:space-between; align-items:center;">
-          <div>
-            <h5 style="font-size:0.95rem; font-weight:700;">${g.name}</h5>
-            <span style="font-size:0.8rem; color:var(--text-muted);">${formatCompactINR(g.target_amount)} in ${g.timeline_years} yrs (${g.expected_return_pct}% return)</span>
-          </div>
-          <button type="button" class="btn-delete-goal" data-id="${g.id}" style="background:transparent; border:none; color:var(--accent-rose); cursor:pointer;">
-            <i class="fa-solid fa-trash-can"></i>
-          </button>
+function fillEmergencyPanel(analysis) {
+  const current = analysis.emergency_fund.current_amount;
+  const target = analysis.emergency_fund.target_amount;
+  const coverage = Math.min((current / Math.max(target, 1)) * 100, 100);
+  document.getElementById("emergency-panel").innerHTML = `
+    <p class="mini-label">Emergency Readiness</p>
+    <h3 class="big-number">${analysis.emergency_fund.months_target} months</h3>
+    <div class="inline-metrics">
+      <div class="mini-stat">
+        Current Reserve
+        <strong>${formatCurrency(current)}</strong>
+      </div>
+      <div class="mini-stat">
+        Target Reserve
+        <strong>${formatCurrency(target)}</strong>
+      </div>
+      <div class="mini-stat">
+        Gap
+        <strong>${formatCurrency(analysis.emergency_fund.gap)}</strong>
+      </div>
+    </div>
+    <div class="bar-chart">
+      <div class="bar-row">
+        <div class="bar-label">
+          <span>Reserve Coverage</span>
+          <span>${formatPercent(coverage)}</span>
         </div>
-      `;
+        <div class="bar-track">
+          <div class="bar-fill warn" style="width: ${coverage}%;"></div>
+        </div>
+      </div>
+    </div>
+    <p class="footer-note">
+      Reserve-first planning avoids pushing the full monthly surplus straight into market risk.
+    </p>
+  `;
+}
 
-      card.querySelector(".btn-delete-goal").addEventListener("click", (e) => {
-        const goalId = e.currentTarget.getAttribute("data-id");
-        currentProfileData.profile.goals = currentProfileData.profile.goals.filter((item) => item.id !== goalId);
-        recalculatePlan();
-      });
+function fillRiskPanel(analysis) {
+  document.getElementById("risk-panel").innerHTML = `
+    <p class="mini-label">Illustrative Risk Category</p>
+    <h3 class="big-number">${analysis.risk_profile.label}</h3>
+    <div class="pill-row">
+      <span class="signal-pill">Score ${analysis.risk_profile.score}</span>
+      <span class="signal-pill">Volatility ${analysis.recommendation.expected_annual_volatility_pct}%</span>
+      <span class="signal-pill">Return assumption ${analysis.recommendation.expected_annual_return_pct}%</span>
+    </div>
+    <div class="stack">
+      ${analysis.risk_profile.reasoning
+        .map((reason) => `<div class="mini-stat"><strong>${reason}</strong></div>`)
+        .join("")}
+    </div>
+  `;
+}
 
-      goalsListContainer.appendChild(card);
-    });
-  }
+function fillAllocationPanel(analysis) {
+  const allocationItems = Object.entries(analysis.recommendation.target_allocation_pct).map(([name, value]) => ({
+    name,
+    value,
+  }));
+  document.getElementById("allocation-panel").innerHTML = `
+    <p class="mini-label">Example Asset Mix</p>
+    <h3 class="big-number">${formatCurrency(analysis.recommendation.suggested_monthly_investment)}</h3>
+    <p class="muted">Illustrative monthly amount after reserve assumptions: ${formatCurrency(
+      analysis.recommendation.reserve_priority
+    )} to emergency and near-term buffers.</p>
+    ${createBarRows(allocationItems, "value", formatPercent)}
+    <div class="tableish">
+      ${allocationItems
+        .map(
+          (item) => `
+            <div class="table-row">
+              <span>${item.name}</span>
+              <span>${formatPercent(item.value)}</span>
+              <strong>${formatCurrency(analysis.recommendation.target_monthly_amounts[item.name])}</strong>
+            </div>
+          `
+        )
+        .join("")}
+    </div>
+  `;
+}
 
-  // 3. Emergency & Cash Flow
-  function renderEmergencyAndCashFlow(data) {
-    const em = data.emergency_fund;
-    document.getElementById("emTargetReserve").textContent = formatINR(em.target_reserve);
-    document.getElementById("emCurrentReserve").textContent = formatINR(em.current_reserve);
-    document.getElementById("emGap").textContent = formatINR(em.reserve_gap);
+function fillMarketPanel(market) {
+  document.getElementById("market-panel").innerHTML = `
+    <p class="mini-label">Example Market Signal</p>
+    <h3 class="big-number">${market.derived.market_regime}</h3>
+    <div class="tableish">
+      ${market.indices
+        .map(
+          (index) => `
+            <div class="table-row">
+              <span>${index.name}</span>
+              <span>${index.value.toLocaleString("en-IN")}</span>
+              <strong class="${index.change_pct >= 0 ? "status-positive" : "status-alert"}">
+                ${index.change_pct >= 0 ? "+" : ""}${formatPercent(index.change_pct)}
+              </strong>
+            </div>
+          `
+        )
+        .join("")}
+    </div>
+    <p class="footer-note">Bundled sample timestamp: ${new Date(market.timestamp).toLocaleString("en-IN")} · not a live quote.</p>
+  `;
+}
 
-    const recText = (em.reserve_gap > 0)
-      ? `Allocate approximately ${formatINR(em.reserve_gap)} to liquid bank savings or fixed deposits before committing heavily to long-term equity stocks.`
-      : `Your emergency safety reserve is fully funded! Available monthly surplus can be invested directly into target goals.`;
-    document.getElementById("emRecommendationText").textContent = recText;
-  }
+function fillMarketTicker(market) {
+  const ticker = document.getElementById("market-ticker");
+  ticker.innerHTML = market.indices
+    .slice(0, 5)
+    .map((index) => `
+      <div class="ticker-item">
+        <span class="ticker-name">${index.name}</span>
+        <span class="ticker-value">
+          ${Number(index.value).toLocaleString("en-IN", { maximumFractionDigits: 2 })}
+          <span class="ticker-change ${index.change_pct >= 0 ? "up" : "down"}">
+            ${index.change_pct >= 0 ? "↗ +" : "↘ "}${formatPercent(index.change_pct)}
+          </span>
+        </span>
+      </div>
+    `)
+    .join("");
+  const timestamp = new Date(market.timestamp);
+  document.getElementById("market-stamp").textContent = Number.isNaN(timestamp.valueOf())
+    ? "Illustrative sample data"
+    : `Sample data · ${timestamp.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}`;
+}
 
-  // 4. Holdings Table in Tab 2
-  function renderHoldingsTable(data) {
-    const pa = data.portfolio_analytics;
-    const targetWeights = data.target_allocation.weights_pct;
-    const currentWeights = pa.current_weights_pct;
+function fillSectorPanel(market) {
+  const sectorBars = createBarRows(market.sectors, "return_pct", formatPercent);
+  document.getElementById("sector-panel").innerHTML = `
+    <p class="mini-label">Sector Comparison</p>
+    <h3 class="big-number">Example sector comparison</h3>
+    ${sectorBars}
+    <div class="inline-metrics">
+      ${market.macro
+        .map(
+          (item) => `
+            <div class="mini-stat">
+              ${item.label}
+              <strong class="${statusClass(item.signal)}">${item.value}</strong>
+            </div>
+          `
+        )
+        .join("")}
+    </div>
+  `;
+}
 
-    const tbody = document.getElementById("holdingsTable").querySelector("tbody");
-    tbody.innerHTML = "";
+function fillPortfolioPanels(analysis) {
+  document.getElementById("portfolio-panel").innerHTML = `
+    <p class="mini-label">Portfolio Health</p>
+    <h3 class="big-number">${analysis.portfolio.health_score}/100</h3>
+    <div class="inline-metrics">
+      <div class="mini-stat">
+        Total Value
+        <strong>${formatCurrency(analysis.portfolio.total_value)}</strong>
+      </div>
+      <div class="mini-stat">
+        Return
+        <strong>${formatPercent(analysis.portfolio.portfolio_return_pct)}</strong>
+      </div>
+      <div class="mini-stat">
+        Volatility
+        <strong>${formatPercent(analysis.portfolio.portfolio_volatility_pct)}</strong>
+      </div>
+      <div class="mini-stat">
+        Alignment
+        <strong>${analysis.portfolio.alignment_score}/100</strong>
+      </div>
+    </div>
+    ${createBarRows(
+      analysis.portfolio.asset_allocation.map((item) => ({
+        name: item.category,
+        value: item.weight_pct,
+      })),
+      "value",
+      formatPercent
+    )}
+  `;
 
-    const assetRows = [
-      { name: "Domestic Equity (Indian Stocks)", key: "equity_domestic", desc: "Long-term growth in Indian corporate sector" },
-      { name: "Debt & Fixed Income (FDs / Bonds)", key: "debt", desc: "Guaranteed interest & principal safety" },
-      { name: "Gold & Precious Metals", key: "gold", desc: "Inflation protection & market crash buffer" },
-      { name: "Liquid Cash / Savings", key: "cash", desc: "Instant emergency liquidity" },
-      { name: "International Equity (Global)", key: "equity_international", desc: "US Tech & global geographical exposure" }
-    ];
+  document.getElementById("portfolio-observations-panel").innerHTML = `
+    <p class="mini-label">Review Notes</p>
+    <h3 class="big-number">${analysis.portfolio.concentration_risk} Risk</h3>
+    <div class="stack">
+      ${analysis.portfolio.observations
+        .map((note) => `<div class="mini-stat"><strong>${note}</strong></div>`)
+        .join("")}
+    </div>
+    <p class="footer-note">
+      Sector spread: ${analysis.portfolio.sector_allocation
+        .slice(0, 3)
+        .map((item) => `${item.sector} ${item.weight_pct}%`)
+        .join(" • ")}
+    </p>
+  `;
+}
 
-    assetRows.forEach((asset) => {
-      const cur = currentWeights[asset.key] || 0;
-      const tgt = targetWeights[asset.key] || 0;
-      const diff = cur - tgt;
+function fillGoalsPanel(analysis) {
+  document.getElementById("goals-panel").innerHTML = `
+    <p class="mini-label">Goal Funding</p>
+    <div class="stack">
+      ${analysis.goals
+        .map(
+          (goal) => `
+            <article class="goal-card">
+              <p class="mini-label">${goal.priority} Priority</p>
+              <h3>${goal.name}</h3>
+              <div class="inline-metrics">
+                <div class="mini-stat">
+                  Target
+                  <strong>${formatCurrency(goal.target_amount)}</strong>
+                </div>
+                <div class="mini-stat">
+                  Progress
+                  <strong>${formatPercent(goal.progress_pct)}</strong>
+                </div>
+                <div class="mini-stat">
+                  Estimated monthly saving
+                  <strong>${formatCurrency(goal.required_monthly_investment)}</strong>
+                </div>
+              </div>
+            </article>
+          `
+        )
+        .join("")}
+    </div>
+  `;
+}
 
-      let badgeClass = "badge-info";
-      let actionText = "Maintain";
-      if (diff < -3) {
-        badgeClass = "badge-emerald";
-        actionText = "Keep Buying / Accumulate";
-      } else if (diff > 3) {
-        badgeClass = "badge-amber";
-        actionText = "Slight Overweight — Rebalance";
-      }
+function fillSimulationPanel(analysis) {
+  const pathBars = createBarRows(
+    analysis.simulation.path.map((item) => ({
+      name: `Year ${item.year}`,
+      value: item.base,
+    })),
+    "value",
+    formatCompactCurrency
+  );
 
-      const tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td>
-          <strong>${asset.name}</strong>
-          <div style="font-size:0.75rem; color:var(--text-subtle);">${asset.desc}</div>
-        </td>
-        <td>${cur.toFixed(1)}%</td>
-        <td class="font-bold text-cyan">${tgt.toFixed(1)}%</td>
-        <td><span class="badge ${badgeClass}">${actionText}</span></td>
-      `;
-      tbody.appendChild(tr);
-    });
-  }
+  document.getElementById("simulation-panel").innerHTML = `
+    <p class="mini-label">Scenario Analysis</p>
+    <h3 class="big-number">${formatCurrency(analysis.simulation.base_outcome)}</h3>
+    <div class="inline-metrics">
+      <div class="mini-stat">
+        Conservative
+        <strong>${formatCurrency(analysis.simulation.conservative_outcome)}</strong>
+      </div>
+      <div class="mini-stat">
+        Base
+        <strong>${formatCurrency(analysis.simulation.base_outcome)}</strong>
+      </div>
+      <div class="mini-stat">
+        Optimistic
+        <strong>${formatCurrency(analysis.simulation.optimistic_outcome)}</strong>
+      </div>
+    </div>
+    ${pathBars}
+  `;
+}
 
-  // 5. Target Asset Allocation
-  function renderTargetAllocation(data) {
-    const alloc = data.target_allocation;
-    const weights = alloc.weights_pct;
-    const splits = alloc.monthly_split_inr;
+function fillAssistantPanel(analysis) {
+  document.getElementById("assistant-panel").innerHTML = `
+    <strong>Explanation</strong>
+    <p>${analysis.assistant_explanation}</p>
+    <p class="footer-note">
+      Educational use only. Historical return assumptions and simulated scenarios are uncertain and should not be
+      treated as guaranteed outcomes.
+    </p>
+  `;
+}
 
-    renderChart("assetAllocationChart", {
-      type: "doughnut",
-      data: {
-        labels: ["Domestic Equity", "Debt", "Gold", "Cash/Liquid", "Int'l Equity"],
-        datasets: [{
-          data: [
-            weights.equity_domestic,
-            weights.debt,
-            weights.gold,
-            weights.cash,
-            weights.equity_international
-          ],
-          backgroundColor: ["#06b6d4", "#6366f1", "#f59e0b", "#10b981", "#a855f7"],
-          borderWidth: 0
-        }]
-      },
-      options: {
-        responsive: true,
-        plugins: { legend: { position: "bottom", labels: { color: "#9ca3af" } } },
-        cutout: "65%"
-      }
-    });
+function populateForm(analysis) {
+  const profile = analysis.profile;
+  const mapping = {
+    monthly_income: profile.monthly_income,
+    age: profile.age,
+    dependents: profile.dependents,
+    rent: profile.monthly_expenses.rent,
+    food: profile.monthly_expenses.food,
+    transportation: profile.monthly_expenses.transportation,
+    emis: profile.monthly_expenses.emis,
+    emergency_fund: profile.emergency_fund,
+    existing_savings: profile.existing_savings,
+    investment_horizon_years: profile.risk_inputs.investment_horizon_years,
+    loss_tolerance: profile.risk_inputs.loss_tolerance,
+    volatility_comfort: profile.risk_inputs.volatility_comfort,
+    income_stability: profile.risk_inputs.income_stability,
+    market_knowledge: profile.risk_inputs.market_knowledge,
+  };
 
-    const tbody = document.getElementById("assetSplitTable").querySelector("tbody");
-    tbody.innerHTML = `
-      <tr><td><i class="fa-solid fa-square text-cyan"></i> Domestic Equity</td><td>${weights.equity_domestic}%</td><td class="text-cyan font-bold">${formatINR(splits.equity_domestic)}</td></tr>
-      <tr><td><i class="fa-solid fa-square text-indigo"></i> Debt & Fixed Income</td><td>${weights.debt}%</td><td class="text-indigo font-bold">${formatINR(splits.debt)}</td></tr>
-      <tr><td><i class="fa-solid fa-square text-amber"></i> Gold & Metals</td><td>${weights.gold}%</td><td class="text-amber font-bold">${formatINR(splits.gold)}</td></tr>
-      <tr><td><i class="fa-solid fa-square text-emerald"></i> Liquid / Cash</td><td>${weights.cash}%</td><td class="text-emerald font-bold">${formatINR(splits.cash)}</td></tr>
-      <tr><td><i class="fa-solid fa-square text-purple"></i> International Equity</td><td>${weights.equity_international}%</td><td class="text-purple font-bold">${formatINR(splits.equity_international)}</td></tr>
-    `;
-  }
-
-  // 6. Goals Table
-  function renderGoalsTable(goalPlan) {
-    const tbody = document.getElementById("goalsTable").querySelector("tbody");
-    tbody.innerHTML = "";
-
-    const feasBadge = document.getElementById("goalFeasibilityBadge");
-    feasBadge.textContent = goalPlan.feasibility;
-    feasBadge.className = `badge badge-${goalPlan.feasibility_badge}`;
-
-    document.getElementById("totalReqSipVal").textContent = formatINR(goalPlan.total_required_sip);
-    
-    const bufText = (goalPlan.surplus_gap_or_buffer >= 0)
-      ? `Surplus Buffer: ${formatINR(goalPlan.surplus_gap_or_buffer)}`
-      : `Surplus Deficit: ${formatINR(Math.abs(goalPlan.surplus_gap_or_buffer))}`;
-    document.getElementById("surplusGapCell").textContent = bufText;
-
-    if (!goalPlan.goals || goalPlan.goals.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--text-subtle);">No financial goals configured yet. Click 'Add Goal' in Tab 1.</td></tr>`;
-      return;
+  Object.entries(mapping).forEach(([key, value]) => {
+    const input = document.querySelector(`[name="${key}"]`);
+    if (input) {
+      input.value = value;
     }
+  });
+  updateRangeLabels();
+}
 
-    goalPlan.goals.forEach((g) => {
-      const tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td><strong>${g.name}</strong></td>
-        <td>${formatCompactINR(g.target_amount)}</td>
-        <td>${g.timeline_years} Yrs</td>
-        <td>${g.expected_return_pct}%</td>
-        <td class="text-amber font-bold">${formatINR(g.required_monthly_sip)}</td>
-        <td><span class="badge badge-info">${g.priority}</span></td>
-      `;
-      tbody.appendChild(tr);
-    });
+function updateRangeLabels() {
+  document.querySelectorAll("[data-range-for]").forEach((node) => {
+    const input = document.querySelector(`[name="${node.dataset.rangeFor}"]`);
+    node.textContent = input ? input.value : "";
+  });
+}
+
+function render() {
+  fillSummaryGrid(state.analysis, state.market);
+  fillCashFlowPanel(state.analysis);
+  fillEmergencyPanel(state.analysis);
+  fillRiskPanel(state.analysis);
+  fillAllocationPanel(state.analysis);
+  fillMarketPanel(state.market);
+  fillMarketTicker(state.market);
+  fillSectorPanel(state.market);
+  fillPortfolioPanels(state.analysis);
+  fillGoalsPanel(state.analysis);
+  fillSimulationPanel(state.analysis);
+  fillAssistantPanel(state.analysis);
+}
+
+function setTheme(theme) {
+  document.body.dataset.theme = theme;
+  const dark = theme === "dark";
+  document.querySelector('meta[name="theme-color"]').content = dark ? "#101a17" : "#f5f8f7";
+  const button = document.getElementById("theme-toggle");
+  button.setAttribute("aria-label", `Switch to ${dark ? "light" : "dark"} mode`);
+  button.querySelector(".theme-label").textContent = dark ? "Light mode" : "Dark mode";
+  try {
+    localStorage.setItem("northstar-theme", theme);
+  } catch {
+    // The theme still works for this session if browser storage is disabled.
   }
+}
 
-  // 7. Portfolio Health & Comparison
-  function renderPortfolioHealth(data) {
-    const pa = data.portfolio_analytics;
-    const targetWeights = data.target_allocation.weights_pct;
-    const currentWeights = pa.current_weights_pct;
+function showPage(pageName, updateHash = false) {
+  const knownPages = ["overview", "markets", "portfolio", "planning", "learn"];
+  const page = knownPages.includes(pageName) ? pageName : "overview";
+  document.querySelectorAll(".page-view").forEach((view) => {
+    view.hidden = view.dataset.page !== page;
+  });
+  document.querySelectorAll("[data-page-link]").forEach((link) => {
+    if (!link.closest(".primary-nav")) return;
+    const active = link.dataset.pageLink === page;
+    link.classList.toggle("active", active);
+    if (active) link.setAttribute("aria-current", "page");
+    else link.removeAttribute("aria-current");
+  });
+  if (updateHash && window.location.hash !== `#${page}`) {
+    window.history.pushState({ page }, "", `#${page}`);
+  }
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
 
-    document.getElementById("valAlignmentScore").textContent = `${pa.alignment_score}%`;
-    document.getElementById("valDiversificationScore").textContent = `${pa.diversification_score} / 100`;
-    document.getElementById("valPortfolioTotal").textContent = formatCompactINR(pa.total_value);
+async function loadBootstrap() {
+  const response = await fetch("/api/bootstrap");
+  const payload = await readJson(response);
+  state.analysis = payload.analysis;
+  state.market = payload.market;
+  populateForm(payload.analysis);
+  render();
+}
 
-    renderChart("portfolioComparisonChart", {
-      type: "bar",
-      data: {
-        labels: ["Dom Equity", "Debt", "Gold", "Cash", "Int'l Equity"],
-        datasets: [
-          { label: "Current %", data: [currentWeights.equity_domestic||0, currentWeights.debt||0, currentWeights.gold||0, currentWeights.cash||0, currentWeights.equity_international||0], backgroundColor: "#6366f1" },
-          { label: "Target %", data: [targetWeights.equity_domestic||0, targetWeights.debt||0, targetWeights.gold||0, targetWeights.cash||0, targetWeights.equity_international||0], backgroundColor: "#06b6d4" }
-        ]
+function buildPayload() {
+  const form = document.getElementById("planner-form");
+  const data = new FormData(form);
+  return {
+    age: Number(data.get("age")),
+    dependents: Number(data.get("dependents")),
+    monthly_income: Number(data.get("monthly_income")),
+    emergency_fund: Number(data.get("emergency_fund")),
+    existing_savings: Number(data.get("existing_savings")),
+    monthly_expenses: {
+      rent: Number(data.get("rent")),
+      food: Number(data.get("food")),
+      transportation: Number(data.get("transportation")),
+      emis: Number(data.get("emis")),
+    },
+    risk_inputs: {
+      investment_horizon_years: Number(data.get("investment_horizon_years")),
+      loss_tolerance: Number(data.get("loss_tolerance")),
+      volatility_comfort: Number(data.get("volatility_comfort")),
+      income_stability: Number(data.get("income_stability")),
+      market_knowledge: Number(data.get("market_knowledge")),
+    },
+  };
+}
+
+async function handleSubmit(event) {
+  event.preventDefault();
+  const button = event.currentTarget.querySelector("button");
+  button.disabled = true;
+  button.textContent = "Recalculating...";
+  try {
+    const response = await fetch("/api/analyze", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
       },
-      options: {
-        responsive: true,
-        plugins: { legend: { position: "top", labels: { color: "#9ca3af" } } },
-        scales: {
-          x: { ticks: { color: "#9ca3af" }, grid: { display: false } },
-          y: { ticks: { color: "#9ca3af" }, grid: { color: "rgba(255,255,255,0.05)" } }
-        }
-      }
+      body: JSON.stringify(buildPayload()),
     });
-
-    const sectors = pa.sector_breakdown || [];
-    const secLabels = sectors.map((s) => s.sector);
-    const secData = sectors.map((s) => s.weight_pct);
-
-    renderChart("sectorChart", {
-      type: "bar",
-      data: {
-        labels: secLabels.length ? secLabels : ["No Specific Sector Overweight"],
-        datasets: [{
-          label: "Sector Weight %",
-          data: secData.length ? secData : [100],
-          backgroundColor: "#10b981"
-        }]
-      },
-      options: {
-        indexAxis: "y",
-        responsive: true,
-        plugins: { legend: { display: false } },
-        scales: {
-          x: { ticks: { color: "#9ca3af" }, grid: { color: "rgba(255,255,255,0.05)" } },
-          y: { ticks: { color: "#9ca3af" }, grid: { display: false } }
-        }
-      }
-    });
-
-    const rebalanceList = document.getElementById("rebalanceList");
-    rebalanceList.innerHTML = "";
-    (pa.rebalancing_suggestions || []).forEach((sug) => {
-      const li = document.createElement("li");
-      li.textContent = sug;
-      rebalanceList.appendChild(li);
-    });
+    const analysis = await readJson(response);
+    state.analysis = analysis;
+    render();
+  } catch (error) {
+    showStatus(error.message);
+  } finally {
+    button.disabled = false;
+    button.textContent = "Update illustration →";
   }
+}
 
-  // 8. Monte Carlo Simulation Chart
-  function renderMonteCarlo(sim) {
-    const outcomes = sim.outcomes;
-    document.getElementById("valP10").textContent = formatCompactINR(outcomes.conservative_p10);
-    document.getElementById("valP50").textContent = formatCompactINR(outcomes.base_p50);
-    document.getElementById("valP90").textContent = formatCompactINR(outcomes.optimistic_p90);
+document.getElementById("planner-form").addEventListener("submit", handleSubmit);
+document.querySelectorAll("[data-page-link]").forEach((link) => {
+  link.addEventListener("click", (event) => {
+    event.preventDefault();
+    showPage(link.dataset.pageLink, true);
+  });
+});
+window.addEventListener("popstate", () => showPage(window.location.hash.slice(1)));
+window.addEventListener("hashchange", () => showPage(window.location.hash.slice(1)));
+showPage(window.location.hash.slice(1));
+document.getElementById("theme-toggle").addEventListener("click", () => {
+  setTheme(document.body.dataset.theme === "dark" ? "light" : "dark");
+});
+try {
+  setTheme(localStorage.getItem("northstar-theme") === "dark" ? "dark" : "light");
+} catch {
+  setTheme("light");
+}
+document.querySelectorAll('input[type="range"]').forEach((input) => {
+  input.addEventListener("input", updateRangeLabels);
+});
 
-    const ts = sim.time_series || [];
-    const labels = ts.map((item) => `Yr ${item.year}`);
-    const p10Data = ts.map((item) => item.conservative_p10);
-    const p50Data = ts.map((item) => item.base_p50);
-    const p90Data = ts.map((item) => item.optimistic_p90);
-
-    renderChart("monteCarloChart", {
-      type: "line",
-      data: {
-        labels: labels,
-        datasets: [
-          { label: "Optimistic Scenario (90th %ile)", data: p90Data, borderColor: "#10b981", backgroundColor: "rgba(16, 185, 129, 0.1)", fill: true, tension: 0.3 },
-          { label: "Expected Base Case (50th %ile)", data: p50Data, borderColor: "#06b6d4", backgroundColor: "transparent", borderWidth: 3, tension: 0.3 },
-          { label: "Conservative Market (10th %ile)", data: p10Data, borderColor: "#f59e0b", backgroundColor: "rgba(245, 158, 11, 0.1)", fill: true, tension: 0.3 }
-        ]
-      },
-      options: {
-        responsive: true,
-        plugins: {
-          legend: { position: "top", labels: { color: "#9ca3af" } },
-          tooltip: {
-            callbacks: {
-              label: function (context) {
-                return `${context.dataset.label}: ${formatCompactINR(context.raw)}`;
-              }
-            }
-          }
-        },
-        scales: {
-          x: { ticks: { color: "#9ca3af" }, grid: { color: "rgba(255,255,255,0.05)" } },
-          y: {
-            ticks: {
-              color: "#9ca3af",
-              callback: function (val) { return formatCompactINR(val); }
-            },
-            grid: { color: "rgba(255,255,255,0.05)" }
-          }
-        }
-      }
-    });
-  }
-
-  // 9. Market Context & Insights
-  function renderMarketRegimeAndInsights(data) {
-    const regime = data.market_regime;
-    document.getElementById("marketRegimeTitle").textContent = regime.regime;
-    document.getElementById("marketRegimeBias").textContent = `Tactical Bias: ${regime.tactical_bias}`;
-
-    const ul = document.getElementById("plainLanguageInsights");
-    ul.innerHTML = "";
-    (data.insights || []).forEach((ins) => {
-      const li = document.createElement("li");
-      li.textContent = ins;
-      ul.appendChild(li);
-    });
-  }
-
-  // Chart Helper
-  function renderChart(canvasId, config) {
-    if (chartInstances[canvasId]) {
-      chartInstances[canvasId].destroy();
-    }
-    const canvas = document.getElementById(canvasId);
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    chartInstances[canvasId] = new Chart(ctx, config);
-  }
-
-  // Run initialization
-  init();
+loadBootstrap().catch((error) => {
+  document.body.innerHTML = `<main class="layout"><section class="section-block glass"><h2>Unable to load dashboard</h2><p>${error.message}</p></section></main>`;
 });

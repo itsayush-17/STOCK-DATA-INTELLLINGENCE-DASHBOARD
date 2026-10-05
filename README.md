@@ -1,135 +1,178 @@
-# Smart Investment & Portfolio Analytics
+# Northstar — Smart Investment & Portfolio Analytics
 
-An India-focused investment decision-support platform that analyzes a user's income, expenses, risk tolerance, financial goals, current portfolio, and market conditions to generate data-driven allocation guidance and scenario planning.
+[![CI](https://github.com/itsayush-17/STOCK-DATA-INTELLLINGENCE-DASHBOARD/actions/workflows/ci.yml/badge.svg)](https://github.com/itsayush-17/STOCK-DATA-INTELLLINGENCE-DASHBOARD/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-0b7285.svg)](./LICENSE)
+[![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-1f6feb.svg)](https://www.python.org/)
 
-> **Disclaimer**: This repository is positioned as an educational analytics tool, not a source of guaranteed financial advice. Returns and risk estimates are model-driven assumptions, not guarantees. Historical patterns and simulated outcomes do not ensure future performance. Users should validate important financial decisions with licensed professionals.
+Northstar is an India-focused learning and analytics site for people who want to understand their money before making investment decisions. It brings cash-flow planning, risk education, portfolio concepts, market context, and simple explanations into one place.
 
----
+The project is educational. It is not SEBI-registered investment advice, does not execute trades, and never promises returns.
 
-## Key Features
+## What is in this repository
 
-- **Personalized Investment Planning**: Analyzes income, expenses, financial goals, and risk posture.
-- **Emergency-Fund Readiness Checks**: Verifies safety-net coverage before recommending aggressive allocations.
-- **Goal-Based SIP Planning**: Calculates required monthly SIPs for major life events and retirement.
-- **Portfolio Analytics & Diagnostics**: Evaluates diversification, sector concentration, target alignment, and health scoring.
-- **Monte Carlo Scenario Simulation**: Runs 1,000-path stochastic simulations for conservative (10th percentile), base (50th percentile), and optimistic (90th percentile) outcomes.
-- **India-Focused Market & Macro Dashboard**: Tracks Indian indices (NIFTY 50, SENSEX, Midcaps), global context, RBI repo rate, CPI inflation, yield curves, and USD/INR rates.
-- **Plain-Language Explanation Layer**: Translates quantitative metrics into clear, actionable executive takeaways.
+### Website
 
----
+- Separate Overview, Markets, Portfolio, Planning, and Learn pages
+- Responsive layout with light and dark themes
+- Example cash-flow, risk, goal, and portfolio summaries
+- Beginner-friendly explanations and a visible education disclaimer
+- Clear sample-data labels: current market and portfolio figures are bundled demonstrations, not live prices or personal account data
 
-## System Architecture
+### Analytics and API foundation
 
-```text
-Market + Macro Inputs
-        |
-        v
-Seeded Data / Future ETL Layer
-        |
-        v
-Analytics Engine
-  - cash flow
-  - emergency fund
-  - risk score
-  - allocation model
-  - portfolio review
-  - goal planning
-  - simulation
-        |
-        v
-Local API Server
-        |
-        v
-Interactive Dashboard
-```
+- Cash-flow and emergency-fund calculations
+- Risk-profile exercise and illustrative asset mix
+- Goal, SIP, lump-sum, and scenario calculators
+- FastAPI routes for registration, sign-in, investment guides, private holdings, and planning tools
+- SQLAlchemy models and an Alembic migration; SQLite by default, PostgreSQL supported through `DATABASE_URL`
+- Seed library with 19 beginner-oriented India and international investment guides
 
----
+## Current data limits
 
-## Project Structure
+The visible website uses sample market and portfolio information. It does not yet fetch live market prices or connect the website portfolio screen to user accounts. The FastAPI service is a separate API foundation at this stage. Guide text about returns, taxes, rates, and regulations is educational starter content and must be checked against current official information before publication.
+
+## Project structure
 
 ```text
 backend/
-  analytics/
-    __init__.py
-    engine.py
-    seed.py
-  server.py
-  tests_smoke.py
+  analytics/             Existing planning and analytics engine
+  api/                   FastAPI routes, models, schemas, guide seed, and auth
+  migrations/             Alembic migration environment and revisions
+  server.py               Website and legacy analytics API server
+  tests_smoke.py          Analytics smoke tests
 frontend/
-  app.js
-  index.html
-  styles.css
-.github/
-  ISSUE_TEMPLATE/
-    bug_report.md
-  workflows/
-    ci.yml
-CODE_OF_CONDUCT.md
-CONTRIBUTING.md
-LICENSE
-README.md
-SECURITY.md
+  index.html              Multi-page single-document website
+  styles.css              Responsive visual system and themes
+  app.js                  Navigation, rendering, and planner interactions
+alembic.ini
+Dockerfile
 requirements.txt
 requirements-dev.txt
+README.md
 ```
 
----
+## Run locally on Windows
 
-## Quickstart & Setup
+Clone the repository, then run commands from its folder in PowerShell:
 
-1. **Clone the repository**:
-   ```bash
-   git clone https://github.com/itsayush-17/STOCK-DATA-INTELLLINGENCE-DASHBOARD.git
-   cd STOCK-DATA-INTELLLINGENCE-DASHBOARD
-   ```
+```powershell
+git clone https://github.com/itsayush-17/STOCK-DATA-INTELLLINGENCE-DASHBOARD.git
+Set-Location .\STOCK-DATA-INTELLLINGENCE-DASHBOARD
+py -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe backend\server.py
+```
 
-2. **Create and activate virtual environment**:
-   ```bash
-   python -m venv .venv
-   .venv\Scripts\activate
-   ```
+Open <http://127.0.0.1:8000>. Keep that PowerShell window open while using the site.
 
-3. **Install dependencies**:
-   ```bash
-   pip install -r requirements.txt
-   pip install -r requirements-dev.txt
-   ```
+### Start the FastAPI service
 
-4. **Launch local server**:
-   ```bash
-   python backend/server.py
-   ```
+In a second PowerShell window, from the same repository folder:
 
-5. **Open Dashboard**:
-   Navigate to [http://127.0.0.1:8000](http://127.0.0.1:8000) in your web browser.
+```powershell
+Set-Location .\STOCK-DATA-INTELLLINGENCE-DASHBOARD
+.\.venv\Scripts\python.exe -m alembic upgrade head
+.\.venv\Scripts\python.exe -m uvicorn backend.api.main:app --reload --port 8001
+```
 
-6. **Run Smoke Tests**:
-   ```bash
-   pytest backend/tests_smoke.py
-   ```
+The API docs are at <http://127.0.0.1:8001/docs>. SQLite is the default database. To use PostgreSQL, set `DATABASE_URL` to a SQLAlchemy URL such as `postgresql+psycopg://user:password@localhost:5432/investments` before running the migration. Set a private random `JWT_SECRET` before deployment. Production mode refuses to start without it.
 
----
+## API routes
 
-## API Endpoints
+| Route | Access | Purpose |
+| --- | --- | --- |
+| `GET /api/v1/health` | Public | Service status and education disclaimer |
+| `POST /api/v1/auth/register` | Public | Create an account |
+| `POST /api/v1/auth/login` | Public | Sign in and receive a bearer token |
+| `GET /api/v1/auth/me` | Signed in | Return the current account |
+| `GET /api/v1/guides` | Public | Search guides by name, region, or category |
+| `GET /api/v1/guides/{slug}` | Public | Read one investment guide |
+| `/api/v1/portfolio/holdings` | Signed in | List, add, edit, or remove holdings |
+| `GET /api/v1/portfolio/summary` | Signed in | Summarize recorded holdings and concentration |
+| `POST /api/v1/tools/risk-profile` | Public | Run the sample risk exercise |
+| `POST /api/v1/tools/emergency-fund` | Public | Estimate an emergency reserve gap |
+| `POST /api/v1/tools/sip-calculator` | Public | Estimate regular contributions under an assumption |
+| `POST /api/v1/tools/lumpsum-calculator` | Public | Estimate a one-time investment under an assumption |
+| `POST /api/v1/tools/goal-planner` | Public | Estimate monthly savings toward a goal |
+| `POST /api/v1/tools/monte-carlo` | Public | Show illustrative 10th, 50th, and 90th percentile scenarios |
+| `GET /api/v1/tools/compare?slugs=ppf,index-mutual-fund` | Public | Compare two or three guide entries |
 
-- `GET /api/bootstrap` - Returns the seeded analysis payload, user profile, and market snapshot for initial page load.
-- `GET /api/analyze` - Returns the default analysis payload.
-- `POST /api/analyze` - Accepts a partial or full user profile payload and recalculates all analytics responses in real time.
+Signed-in routes use `Authorization: Bearer <access_token>`. Interactive API documentation at `/docs` shows request and response schemas.
 
----
+Example account request:
 
-## Future Roadmap
+```json
+{
+  "email": "learner@example.com",
+  "password": "use-a-long-unique-password"
+}
+```
 
-- Replace seeded market data with scheduled ingestion from trusted live market APIs
-- Upgrade the server layer to FastAPI
-- Persist users, goals, and transactions in PostgreSQL
-- Add authentication and multi-user support
-- Add downloadable PDF reports and richer interactive visualizations
-- Introduce historical portfolio tracking and rebalancing alerts
+Example holding request:
 
----
+```json
+{
+  "asset_type": "Mutual fund",
+  "name": "Broad market index fund",
+  "category": "Equity",
+  "sector": "Diversified",
+  "country": "India",
+  "quantity": 10,
+  "invested_amount": 5000,
+  "current_value": 5200,
+  "buy_price": 500,
+  "buy_date": "2025-01-15",
+  "platform": "My broker"
+}
+```
 
-## Contributing & License
+## Docker
 
-Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request.  
-This project is licensed under the [MIT License](LICENSE).
+The current Docker image runs the sample website and its legacy analytics endpoints:
+
+```powershell
+docker build -t northstar-investment-analytics .
+docker run --rm -p 8000:8000 northstar-investment-analytics
+```
+
+Open <http://127.0.0.1:8000>. The FastAPI database service is not yet wired into this single-container website deployment.
+
+## Development checks
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest backend/tests_smoke.py
+.\.venv\Scripts\python.exe -m ruff check backend
+```
+
+GitHub Actions runs the Python smoke tests and Ruff checks on pushes and pull requests to `main`.
+
+## Architecture
+
+```text
+Sample market/profile inputs ──> Analytics engine ──> Website server ──> Browser pages
+                                      │
+                                      └──> FastAPI API ──> SQLAlchemy ──> SQLite / PostgreSQL
+```
+
+## Screenshots
+
+Add current Overview, Markets, Portfolio, Planning, and Learn screenshots here as those pages are reviewed.
+
+## Roadmap
+
+- Connect the website pages to the authenticated portfolio API
+- Add a reviewed market-data provider, cache, refresh schedule, and last-known-data fallback
+- Expand the investment explorer and learning library
+- Add richer historical portfolio charts, imports, and downloadable reports
+- Complete deployment configuration and end-to-end checks
+
+## Responsible use
+
+- This site is for education and planning practice, not personalized investment advice.
+- Returns are not guaranteed. Historical performance and scenarios do not predict future results.
+- Higher-risk assets can lose substantial value; review risks, fees, liquidity, taxes, and current rules.
+- Consider a licensed financial or tax professional for decisions specific to you.
+
+## License
+
+MIT. See [LICENSE](./LICENSE).

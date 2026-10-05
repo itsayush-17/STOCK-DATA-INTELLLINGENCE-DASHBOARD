@@ -1,28 +1,35 @@
 ---
 name: Bug report
-about: Create a report to help us improve Smart Investment & Portfolio Analytics
-title: ''
-labels: 'bug'
-assignees: ''
-
+about: Report a defect or regression
+title: "[Bug] "
+labels: bug
+assignees: ""
 ---
 
-**Describe the bug**
-A clear and concise description of what the bug is.
+## Summary
 
-**To Reproduce**
-Steps to reproduce the behavior:
-1. Go to '...'
-2. Click on '....'
-3. Scroll down to '....'
-4. See error
+Describe the bug clearly and briefly.
 
-**Expected behavior**
-A clear and concise description of what you expected to happen.
+## Steps to Reproduce
 
-**Screenshots**
-If applicable, add screenshots to help explain your problem.
+1. Go to `...`
+2. Run `...`
+3. Observe `...`
 
-**Desktop (please complete the following information):**
- - OS: [e.g. Windows/macOS/Linux]
- - Browser [e.g. Chrome, Firefox, Safari]
+## Expected Behavior
+
+Describe what you expected to happen.
+
+## Actual Behavior
+
+Describe what actually happened.
+
+## Environment
+
+- OS:
+- Python version:
+- Browser:
+
+## Additional Context
+
+Add logs, screenshots, or other details here.

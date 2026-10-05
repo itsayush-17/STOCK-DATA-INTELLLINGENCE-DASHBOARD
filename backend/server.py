@@ -1,147 +1,113 @@
-"""
-Built-in Python HTTP Server for Smart Investment & Portfolio Analytics platform.
-Serves API endpoints (/api/bootstrap, /api/analyze) and static frontend files.
-"""
+"""Simple local API and static file server for the investment analytics platform."""
 
-import http.server
+from __future__ import annotations
+
 import json
+import mimetypes
 import os
-import sys
+from http import HTTPStatus
+from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import urlparse
 
-# Ensure root directory and backend directory are in python path
-BASE_DIR = Path(__file__).resolve().parent.parent
-BACKEND_DIR = BASE_DIR / "backend"
-for _p in (BASE_DIR, BACKEND_DIR):
-    if str(_p) not in sys.path:
-        sys.path.insert(0, str(_p))
+from analytics.engine import bootstrap_payload, build_analysis
 
-from backend.analytics.engine import run_full_analysis
-from backend.analytics.seed import DEFAULT_MARKET_SNAPSHOT, DEFAULT_USER_PROFILE
-
-FRONTEND_DIR = BASE_DIR / "frontend"
+ROOT = Path(__file__).resolve().parent.parent
+FRONTEND_DIR = ROOT / "frontend"
+HOST = os.getenv("HOST", "127.0.0.1")
+PORT = int(os.getenv("PORT", "8000"))
+MAX_REQUEST_BYTES = 64 * 1024
 
 
-class PortfolioAnalyticsHandler(http.server.BaseHTTPRequestHandler):
-    """Custom request handler serving REST API and frontend assets."""
+class InvestmentRequestHandler(SimpleHTTPRequestHandler):
+    """Serve API responses and the static frontend from one process."""
 
-    def _send_cors_headers(self):
-        self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, directory=str(FRONTEND_DIR), **kwargs)
 
-    def do_OPTIONS(self):
-        self.send_response(200)
-        self._send_cors_headers()
-        self.end_headers()
-
-    def do_GET(self):
-        parsed = urlparse(self.path)
-        path = parsed.path
-
-        if path == "/api/bootstrap":
-            self._handle_json_response(run_full_analysis())
-        elif path == "/api/analyze":
-            self._handle_json_response(run_full_analysis())
-        else:
-            self._serve_static(path)
-
-    def do_POST(self):
-        parsed = urlparse(self.path)
-        path = parsed.path
-
-        if path == "/api/analyze":
-            try:
-                content_length = int(self.headers.get("Content-Length", 0))
-                body = self.rfile.read(content_length) if content_length > 0 else b"{}"
-                payload = json.loads(body.decode("utf-8")) if body else {}
-                response_data = run_full_analysis(payload)
-                self._handle_json_response(response_data)
-            except Exception as exc:
-                self._handle_json_response({"error": f"Failed to calculate analytics: {str(exc)}"}, status=400)
-        else:
-            self._handle_json_response({"error": "Endpoint not found"}, status=404)
-
-    def _handle_json_response(self, data: dict, status: int = 200):
-        body = json.dumps(data, indent=2).encode("utf-8")
+    def _send_json(self, payload: dict, status: HTTPStatus = HTTPStatus.OK) -> None:
+        body = json.dumps(payload).encode("utf-8")
         self.send_response(status)
-        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
-        self._send_cors_headers()
+        self.send_header("Cache-Control", "no-store")
         self.end_headers()
         self.wfile.write(body)
 
-    def _serve_static(self, path: str):
-        if path == "/" or not path:
-            file_path = FRONTEND_DIR / "index.html"
-        else:
-            relative_path = path.lstrip("/")
-            file_path = FRONTEND_DIR / relative_path
+    def end_headers(self) -> None:
+        """Attach lightweight browser-safety headers to every response."""
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("X-Frame-Options", "DENY")
+        self.send_header("Referrer-Policy", "no-referrer")
+        super().end_headers()
 
-        # Security check: resolve path and verify it stays inside FRONTEND_DIR
+    def _send_not_found(self) -> None:
+        self._send_json({"error": "Not found"}, HTTPStatus.NOT_FOUND)
+
+    def _read_json_body(self) -> dict:
+        """Read a small JSON object and reject malformed client input."""
         try:
-            resolved = file_path.resolve()
-            if not str(resolved).startswith(str(FRONTEND_DIR.resolve())):
-                self._handle_json_response({"error": "Forbidden"}, status=403)
-                return
-        except Exception:
-            self._handle_json_response({"error": "Invalid path"}, status=400)
+            content_length = int(self.headers.get("Content-Length", "0"))
+        except ValueError as error:
+            raise ValueError("Content-Length must be a valid integer.") from error
+
+        if content_length < 0 or content_length > MAX_REQUEST_BYTES:
+            raise ValueError("Request body must be smaller than 64 KB.")
+
+        raw_body = self.rfile.read(content_length) if content_length else b"{}"
+        try:
+            payload = json.loads(raw_body.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError) as error:
+            raise ValueError("Request body must contain valid JSON.") from error
+
+        if not isinstance(payload, dict):
+            raise ValueError("Request body must be a JSON object.")
+        return payload
+
+    def do_GET(self) -> None:  # noqa: N802
+        parsed = urlparse(self.path)
+        if parsed.path == "/api/bootstrap":
+            self._send_json(bootstrap_payload())
+            return
+        if parsed.path == "/api/analyze":
+            self._send_json(build_analysis())
+            return
+        if parsed.path == "/":
+            self.path = "/index.html"
+        return super().do_GET()
+
+    def do_POST(self) -> None:  # noqa: N802
+        parsed = urlparse(self.path)
+        if parsed.path != "/api/analyze":
+            self._send_not_found()
             return
 
-        if not file_path.exists() or file_path.is_dir():
-            # Fallback to index.html for SPA routing if requested resource isn't found
-            file_path = FRONTEND_DIR / "index.html"
-
-        mime_types = {
-            ".html": "text/html; charset=utf-8",
-            ".css": "text/css; charset=utf-8",
-            ".js": "application/javascript; charset=utf-8",
-            ".json": "application/json",
-            ".png": "image/png",
-            ".jpg": "image/jpeg",
-            ".svg": "image/svg+xml",
-            ".ico": "image/x-icon"
-        }
-
-        ext = file_path.suffix.lower()
-        content_type = mime_types.get(ext, "application/octet-stream")
-
         try:
-            with open(file_path, "rb") as f:
-                content = f.read()
+            payload = self._read_json_body()
+            analysis = build_analysis(payload)
+        except (KeyError, TypeError, ValueError) as error:
+            self._send_json({"error": str(error)}, HTTPStatus.BAD_REQUEST)
+            return
+        self._send_json(analysis)
 
-            self.send_response(200)
-            self.send_header("Content-Type", content_type)
-            self.send_header("Content-Length", str(len(content)))
-            self._send_cors_headers()
-            self.end_headers()
-            self.wfile.write(content)
-        except Exception as exc:
-            self._handle_json_response({"error": f"Failed to serve file: {str(exc)}"}, status=500)
-
-    def log_message(self, format, *args):
-        # Concise server request logging
-        sys.stdout.write(f"[{self.log_date_time_string()}] {format % args}\n")
+    def guess_type(self, path: str) -> str:
+        if path.endswith(".js"):
+            return "application/javascript; charset=utf-8"
+        guessed = mimetypes.guess_type(path)[0]
+        return guessed or "application/octet-stream"
 
 
-def create_server(port: int = 8000, host: str = "127.0.0.1") -> http.server.ThreadingHTTPServer:
-    server_address = (host, port)
-    return http.server.ThreadingHTTPServer(server_address, PortfolioAnalyticsHandler)
-
-
-def run_server(port: int = 8000, host: str = "127.0.0.1"):
-    httpd = create_server(port=port, host=host)
-    print(f"Server started cleanly at http://{host}:{port}")
-    print("Serving Smart Investment & Portfolio Analytics Dashboard...")
+def run() -> None:
+    """Start the local development server."""
+    server = ThreadingHTTPServer((HOST, PORT), InvestmentRequestHandler)
+    print(f"Northstar investment learning site running at http://{HOST}:{PORT}")
     try:
-        httpd.serve_forever()
-    except (KeyboardInterrupt, SystemExit):
-        print("\nShutting down server gracefully.")
-        httpd.server_close()
+        server.serve_forever()
+    except KeyboardInterrupt:
+        pass
+    finally:
+        server.server_close()
 
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 8000))
-    host = os.environ.get("HOST", "127.0.0.1")
-    run_server(port=port, host=host)
+    run()

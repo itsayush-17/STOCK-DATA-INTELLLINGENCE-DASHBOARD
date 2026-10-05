@@ -1,3 +1,1 @@
-"""
-Backend package for Smart Investment & Portfolio Analytics.
-"""
+"""Backend package for Northstar investment learning and analytics."""

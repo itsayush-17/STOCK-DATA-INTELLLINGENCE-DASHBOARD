@@ -1,211 +1,205 @@
-"""
-Seeded market, macro, persona, and default data definitions for Smart Investment & Portfolio Analytics.
-"""
+"""Seed data and assumptions for the analytics engine."""
 
-from typing import Dict, Any, List
-
-ASSET_CLASS_PARAMS: Dict[str, Dict[str, Any]] = {
-    "equity_domestic": {
-        "expected_return": 0.12,  # 12% p.a.
-        "volatility": 0.16,       # 16% annual std dev
-        "name": "Domestic Equity (India Large/Mid/Small Cap)"
+DEFAULT_PROFILE = {
+    "name": "Example profile",
+    "age": 29,
+    "employment_status": "Salaried",
+    "location": "Bengaluru, India",
+    "dependents": 2,
+    "monthly_income": 120000,
+    "monthly_expenses": {
+        "rent": 28000,
+        "food": 12000,
+        "electricity": 3500,
+        "transportation": 8000,
+        "education": 0,
+        "healthcare": 5000,
+        "insurance": 4500,
+        "emis": 10000,
+        "subscriptions": 1200,
+        "entertainment": 6000,
+        "other_essential": 6500,
     },
-    "debt": {
-        "expected_return": 0.07,  # 7% p.a.
-        "volatility": 0.04,       # 4% annual std dev
-        "name": "Debt & Fixed Income (Debt Funds, PPF, FDs)"
+    "existing_savings": 220000,
+    "bank_balance": 150000,
+    "emergency_fund": 95000,
+    "loans": 420000,
+    "credit_card_obligations": 18000,
+    "current_portfolio_value": 720000,
+    "monthly_investment_capacity_target": 30000,
+    "risk_inputs": {
+        "investment_horizon_years": 12,
+        "loss_tolerance": 18,
+        "volatility_comfort": 7,
+        "income_stability": 8,
+        "market_knowledge": 6,
     },
-    "gold": {
-        "expected_return": 0.09,  # 9% p.a.
-        "volatility": 0.12,       # 12% annual std dev
-        "name": "Gold & Precious Metals (SGBs, Gold ETFs)"
-    },
-    "cash": {
-        "expected_return": 0.045, # 4.5% p.a.
-        "volatility": 0.015,      # 1.5% annual std dev
-        "name": "Liquid & Cash Reserves (Savings, Liquid Funds)"
-    },
-    "equity_international": {
-        "expected_return": 0.11,  # 11% p.a.
-        "volatility": 0.18,       # 18% annual std dev
-        "name": "International Equity (US/Global Funds)"
-    }
-}
-
-DEFAULT_MARKET_SNAPSHOT: Dict[str, Any] = {
-    "as_of_date": "2026-10-01",
-    "indices": [
-        {"symbol": "^NSEI", "name": "NIFTY 50", "value": 24850.40, "change_pct": 0.65, "region": "India"},
-        {"symbol": "^BSESN", "name": "BSE SENSEX", "value": 81240.15, "change_pct": 0.58, "region": "India"},
-        {"symbol": "NIFTYMID100", "name": "NIFTY MIDCAP 100", "value": 58420.80, "change_pct": 1.12, "region": "India"},
-        {"symbol": "^GSPC", "name": "S&P 500", "value": 5750.20, "change_pct": -0.22, "region": "USA"},
-        {"symbol": "^IXIC", "name": "NASDAQ 100", "value": 18100.50, "change_pct": -0.45, "region": "USA"}
-    ],
-    "macro_indicators": {
-        "rbi_repo_rate": 6.50,
-        "cpi_inflation_pct": 4.80,
-        "igb_10y_yield_pct": 7.05,
-        "usd_inr": 83.55,
-        "brent_crude_usd": 81.40
-    },
-    "sector_performance": [
-        {"sector": "Financial Services & Banking", "weight_nifty50_pct": 32.5, "change_1m_pct": 2.4, "status": "Strong"},
-        {"sector": "Information Technology", "weight_nifty50_pct": 13.8, "change_1m_pct": 3.8, "status": "Outperforming"},
-        {"sector": "Oil, Gas & Consumable Fuels", "weight_nifty50_pct": 11.2, "change_1m_pct": -1.1, "status": "Consolidating"},
-        {"sector": "Fast Moving Consumer Goods (FMCG)", "weight_nifty50_pct": 9.1, "change_1m_pct": 0.8, "status": "Defensive Stable"},
-        {"sector": "Automobile & Auto Components", "weight_nifty50_pct": 6.7, "change_1m_pct": 4.2, "status": "Strong"},
-        {"sector": "Healthcare & Pharma", "weight_nifty50_pct": 5.4, "change_1m_pct": 1.9, "status": "Steady Growth"},
-        {"sector": "Metals & Mining", "weight_nifty50_pct": 3.8, "change_1m_pct": -2.3, "status": "Volatile"}
-    ],
-    "regime_summary": {
-        "regime": "Moderate Inflation / Steady Growth",
-        "description": "Indian economy shows resilient domestic demand with CPI inflation within RBI tolerance band (4-6%) and stable policy rates."
-    }
-}
-
-DEFAULT_USER_PROFILE: Dict[str, Any] = {
-    "name": "Rohan Sharma",
-    "age": 32,
-    "horizon_years": 15,
-    "income_stability_score": 8,  # Scale 1-10 (8 = Salaried IT Professional)
-    "loss_tolerance_score": 7,     # Scale 1-10 (7 = Comfortable with market swings)
-    "monthly_income": 180000.0,    # INR 1,80,000 / month
-    "monthly_expenses": 95000.0,   # INR 95,000 / month
-    "current_emergency_reserve": 450000.0, # INR 4,50,000 (approx ~4.7 months buffer)
     "goals": [
         {
-            "id": "g1",
-            "name": "Emergency Fund Top-Up",
-            "target_amount": 570000.0, # 6 months of expenses (5.7 Lakhs)
-            "timeline_years": 1,
+            "name": "Emergency Fund",
+            "target_amount": 270000,
+            "current_amount": 95000,
+            "years": 1,
             "priority": "High",
-            "expected_return_pct": 6.5
         },
         {
-            "id": "g2",
-            "name": "Home Down Payment",
-            "target_amount": 2500000.0, # 25 Lakhs
-            "timeline_years": 5,
+            "name": "House Down Payment",
+            "target_amount": 2500000,
+            "current_amount": 300000,
+            "years": 8,
             "priority": "High",
-            "expected_return_pct": 9.0
         },
         {
-            "id": "g3",
-            "name": "Children Higher Education",
-            "target_amount": 5000000.0, # 50 Lakhs
-            "timeline_years": 12,
+            "name": "Retirement",
+            "target_amount": 30000000,
+            "current_amount": 220000,
+            "years": 31,
+            "priority": "High",
+        },
+        {
+            "name": "Travel Fund",
+            "target_amount": 300000,
+            "current_amount": 40000,
+            "years": 3,
             "priority": "Medium",
-            "expected_return_pct": 11.5
+        },
+    ],
+    "portfolio": [
+        {
+            "asset": "Large Cap Index Fund",
+            "category": "Equity",
+            "sector": "Diversified",
+            "amount": 210000,
+            "return_pct": 16.4,
+            "volatility_pct": 15.0,
+            "liquidity_score": 9,
         },
         {
-            "id": "g4",
-            "name": "Retirement Corpus",
-            "target_amount": 35000000.0, # 3.5 Crore
-            "timeline_years": 25,
-            "priority": "High",
-            "expected_return_pct": 12.0
-        }
+            "asset": "Flexi Cap Mutual Fund",
+            "category": "Mutual Funds",
+            "sector": "Diversified",
+            "amount": 180000,
+            "return_pct": 14.1,
+            "volatility_pct": 17.0,
+            "liquidity_score": 8,
+        },
+        {
+            "asset": "Tax Saver ELSS",
+            "category": "Mutual Funds",
+            "sector": "Diversified",
+            "amount": 90000,
+            "return_pct": 13.2,
+            "volatility_pct": 18.0,
+            "liquidity_score": 5,
+        },
+        {
+            "asset": "Corporate Bond Fund",
+            "category": "Debt",
+            "sector": "Fixed Income",
+            "amount": 110000,
+            "return_pct": 7.2,
+            "volatility_pct": 4.5,
+            "liquidity_score": 8,
+        },
+        {
+            "asset": "Fixed Deposit",
+            "category": "Debt",
+            "sector": "Fixed Income",
+            "amount": 65000,
+            "return_pct": 6.8,
+            "volatility_pct": 1.2,
+            "liquidity_score": 6,
+        },
+        {
+            "asset": "Gold ETF",
+            "category": "Gold",
+            "sector": "Commodity",
+            "amount": 45000,
+            "return_pct": 10.6,
+            "volatility_pct": 11.0,
+            "liquidity_score": 8,
+        },
+        {
+            "asset": "US Index ETF",
+            "category": "International",
+            "sector": "Technology",
+            "amount": 20000,
+            "return_pct": 12.5,
+            "volatility_pct": 19.5,
+            "liquidity_score": 7,
+        },
     ],
-    "current_portfolio": {
-        "total_value": 1500000.0, # INR 15 Lakhs
-        "holdings": [
-            {"asset_class": "equity_domestic", "amount": 900000.0, "sector": "Information Technology"},
-            {"asset_class": "equity_domestic", "amount": 300000.0, "sector": "Financial Services & Banking"},
-            {"asset_class": "debt", "amount": 150000.0, "sector": "Fixed Income / PPF"},
-            {"asset_class": "gold", "amount": 90000.0, "sector": "Commodities"},
-            {"asset_class": "cash", "amount": 60000.0, "sector": "Liquid Reserves"}
-        ]
-    }
 }
 
-PRESET_PERSONAS: List[Dict[str, Any]] = [
-    {
-        "id": "rohan",
-        "title": "Rohan Sharma - 32, Salaried Tech Professional",
-        "description": "Moderate-high income, building down payment and retirement nest egg.",
-        "profile": DEFAULT_USER_PROFILE
+MARKET_SNAPSHOT = {
+    "timestamp": "2026-08-23T09:15:00+05:30",
+    "indices": [
+        {"name": "Nifty 50", "value": 25462.3, "change_pct": 0.84},
+        {"name": "Sensex", "value": 83618.7, "change_pct": 0.76},
+        {"name": "Nifty Midcap 150", "value": 20543.2, "change_pct": 1.12},
+        {"name": "S&P 500", "value": 6741.8, "change_pct": 0.21},
+        {"name": "NASDAQ 100", "value": 23918.1, "change_pct": 0.35},
+    ],
+    "macro": [
+        {"label": "India CPI", "value": "4.8%", "signal": "stable"},
+        {"label": "RBI Repo Rate", "value": "6.25%", "signal": "neutral"},
+        {"label": "10Y G-Sec Yield", "value": "7.03%", "signal": "watch"},
+        {"label": "USD/INR", "value": "83.14", "signal": "stable"},
+        {"label": "Gold (10g)", "value": "₹74,850", "signal": "positive"},
+    ],
+    "sectors": [
+        {"name": "Banking", "return_pct": 13.1, "volatility_pct": 14.5, "momentum": "Strong"},
+        {
+            "name": "Information Technology",
+            "return_pct": 10.4,
+            "volatility_pct": 18.2,
+            "momentum": "Improving",
+        },
+        {"name": "Healthcare", "return_pct": 8.6, "volatility_pct": 11.9, "momentum": "Defensive"},
+        {"name": "FMCG", "return_pct": 7.4, "volatility_pct": 9.6, "momentum": "Stable"},
+        {"name": "Energy", "return_pct": 11.2, "volatility_pct": 16.8, "momentum": "Cyclical"},
+        {"name": "Automobile", "return_pct": 14.8, "volatility_pct": 17.1, "momentum": "Strong"},
+        {
+            "name": "Renewable Energy",
+            "return_pct": 16.0,
+            "volatility_pct": 21.4,
+            "momentum": "High Growth",
+        },
+    ],
+}
+
+ASSET_ASSUMPTIONS = {
+    "Conservative": {
+        "expected_return": 0.082,
+        "volatility": 0.09,
+        "allocation": {
+            "Equity": 25,
+            "Debt": 40,
+            "Gold": 10,
+            "International": 5,
+            "Cash": 20,
+        },
     },
-    {
-        "id": "priya",
-        "title": "Priya Patel - 41, Business Owner & Parent",
-        "description": "Variable business cash flows, focused on child education & conservative wealth preservation.",
-        "profile": {
-            "name": "Priya Patel",
-            "age": 41,
-            "horizon_years": 10,
-            "income_stability_score": 5,
-            "loss_tolerance_score": 5,
-            "monthly_income": 250000.0,
-            "monthly_expenses": 140000.0,
-            "current_emergency_reserve": 1200000.0,
-            "goals": [
-                {
-                    "id": "g1",
-                    "name": "Child Overseas Education",
-                    "target_amount": 7500000.0,
-                    "timeline_years": 7,
-                    "priority": "High",
-                    "expected_return_pct": 10.0
-                },
-                {
-                    "id": "g2",
-                    "name": "Retirement Corpus",
-                    "target_amount": 40000000.0,
-                    "timeline_years": 18,
-                    "priority": "High",
-                    "expected_return_pct": 11.0
-                }
-            ],
-            "current_portfolio": {
-                "total_value": 4200000.0,
-                "holdings": [
-                    {"asset_class": "equity_domestic", "amount": 1800000.0, "sector": "Financial Services & Banking"},
-                    {"asset_class": "debt", "amount": 1500000.0, "sector": "Fixed Income / PPF"},
-                    {"asset_class": "gold", "amount": 500000.0, "sector": "Commodities"},
-                    {"asset_class": "equity_international", "amount": 400000.0, "sector": "Global Tech"}
-                ]
-            }
-        }
+    "Moderate": {
+        "expected_return": 0.115,
+        "volatility": 0.14,
+        "allocation": {
+            "Equity": 50,
+            "Debt": 25,
+            "Gold": 10,
+            "International": 5,
+            "Cash": 10,
+        },
     },
-    {
-        "id": "amit_sunita",
-        "title": "Amit & Sunita - 26, Young Double Income Couple",
-        "description": "High risk tolerance, long investment horizon, aggressive wealth building.",
-        "profile": {
-            "name": "Amit & Sunita",
-            "age": 26,
-            "horizon_years": 20,
-            "income_stability_score": 9,
-            "loss_tolerance_score": 9,
-            "monthly_income": 220000.0,
-            "monthly_expenses": 80000.0,
-            "current_emergency_reserve": 600000.0,
-            "goals": [
-                {
-                    "id": "g1",
-                    "name": "First Home Purchase",
-                    "target_amount": 3000000.0,
-                    "timeline_years": 4,
-                    "priority": "High",
-                    "expected_return_pct": 9.5
-                },
-                {
-                    "id": "g2",
-                    "name": "Early Retirement / Financial Independence",
-                    "target_amount": 60000000.0,
-                    "timeline_years": 20,
-                    "priority": "High",
-                    "expected_return_pct": 13.0
-                }
-            ],
-            "current_portfolio": {
-                "total_value": 850000.0,
-                "holdings": [
-                    {"asset_class": "equity_domestic", "amount": 600000.0, "sector": "Information Technology"},
-                    {"asset_class": "equity_international", "amount": 150000.0, "sector": "Global Tech"},
-                    {"asset_class": "cash", "amount": 100000.0, "sector": "Liquid Reserves"}
-                ]
-            }
-        }
-    }
-]
+    "Aggressive": {
+        "expected_return": 0.142,
+        "volatility": 0.19,
+        "allocation": {
+            "Equity": 65,
+            "Debt": 15,
+            "Gold": 8,
+            "International": 7,
+            "Cash": 5,
+        },
+    },
+}
