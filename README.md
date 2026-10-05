@@ -1,6 +1,6 @@
 # Northstar — Smart Investment & Portfolio Analytics
 
-[![CI](https://github.com/itsayush-17/STOCK-DATA-INTELLLINGENCE-DASHBOARD/actions/workflows/ci.yml/badge.svg)](https://github.com/itsayush-17/STOCK-DATA-INTELLLINGENCE-DASHBOARD/actions/workflows/ci.yml)
+[![CI](https://github.com/itsayush-17/northstar-investment-analytics/actions/workflows/ci.yml/badge.svg)](https://github.com/itsayush-17/northstar-investment-analytics/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-0b7285.svg)](./LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-1f6feb.svg)](https://www.python.org/)
 
@@ -56,8 +56,8 @@ README.md
 Clone the repository, then run commands from its folder in PowerShell:
 
 ```powershell
-git clone https://github.com/itsayush-17/STOCK-DATA-INTELLLINGENCE-DASHBOARD.git
-Set-Location .\STOCK-DATA-INTELLLINGENCE-DASHBOARD
+git clone https://github.com/itsayush-17/northstar-investment-analytics.git
+Set-Location .\northstar-investment-analytics
 py -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
 .\.venv\Scripts\python.exe backend\server.py
@@ -70,7 +70,7 @@ Open <http://127.0.0.1:8000>. Keep that PowerShell window open while using the s
 In a second PowerShell window, from the same repository folder:
 
 ```powershell
-Set-Location .\STOCK-DATA-INTELLLINGENCE-DASHBOARD
+Set-Location .\northstar-investment-analytics
 .\.venv\Scripts\python.exe -m alembic upgrade head
 .\.venv\Scripts\python.exe -m uvicorn backend.api.main:app --reload --port 8001
 ```
